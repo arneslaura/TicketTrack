@@ -4,6 +4,22 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+fun localProperty(name: String): String {
+    return rootProject.file("local.properties")
+        .takeIf { it.exists() }
+        ?.readLines()
+        ?.map { it.trim() }
+        ?.firstOrNull { it.startsWith("$name=") }
+        ?.substringAfter("=")
+        ?.trim()
+        .orEmpty()
+}
+
+val mapsApiKey = localProperty("MAPS_API_KEY")
+val googleWebClientId = localProperty("GOOGLE_WEB_CLIENT_ID")
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
+
 android {
     namespace = "com.example.tickettrack"
     compileSdk {
@@ -18,6 +34,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
+        buildConfigField("boolean", "MAPS_ENABLED", mapsApiKey.isNotBlank().toString())
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
     buildTypes {
@@ -33,6 +52,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -62,4 +82,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("com.google.firebase:firebase-firestore")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("com.google.maps.android:maps-compose:6.4.1")
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 }
