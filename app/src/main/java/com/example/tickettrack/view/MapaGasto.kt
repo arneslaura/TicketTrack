@@ -1,47 +1,75 @@
 package com.example.tickettrack.view
 
+import android.preference.PreferenceManager
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerState
-import com.google.maps.android.compose.rememberCameraPositionState
+import androidx.compose.ui.viewinterop.AndroidView
+import org.osmdroid.config.Configuration
+import org.osmdroid.events.MapEventsReceiver
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.MapEventsOverlay
+import org.osmdroid.views.overlay.Marker
 
 @Composable
 fun MapaGasto(
     latitud: Double,
     longitud: Double,
     modifier: Modifier = Modifier,
-    onMover: ((LatLng) -> Unit)? = null
+    onMover: ((Double, Double) -> Unit)? = null
 ) {
-    val punto = LatLng(latitud, longitud)
-    val camara = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(punto, 15f)
-    }
-    val marcador = remember { MarkerState(position = punto) }
+    val context = LocalContext.current
+    Configuration.getInstance().userAgentValue = "TicketTrack_UNAJ_Laura_1.0"
 
-    LaunchedEffect(latitud, longitud) {
-        val nueva = LatLng(latitud, longitud)
-        marcador.position = nueva
-        camara.position = CameraPosition.fromLatLngZoom(nueva, camara.position.zoom)
-    }
+    val prefs = context.getSharedPreferences("osmdroid", android.content.Context.MODE_PRIVATE)
+    Configuration.getInstance().load(context, prefs)
 
-    GoogleMap(
+    AndroidView(
+        factory = { ctx ->
+            MapView(ctx).apply {
+                setMultiTouchControls(true)
+                controller.setZoom(17.0)
+
+                val puntoInicial = GeoPoint(latitud, longitud)
+                controller.setCenter(puntoInicial)
+
+                val marcador = Marker(this).apply {
+                    position = puntoInicial
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    id = "marcador_gasto"
+                }
+                overlays.add(marcador)
+
+                val receptorEventos = object : MapEventsReceiver {
+                    override fun singleTapConfirmedHelper(p: GeoPoint): Boolean {
+                        if (onMover != null) {
+                            marcador.position = p
+                            invalidate()
+                            onMover(p.latitude, p.longitude)
+                        }
+                        return true
+                    }
+                    override fun longPressHelper(p: GeoPoint): Boolean = false
+                }
+                overlays.add(MapEventsOverlay(receptorEventos))
+            }
+        },
+        update = { mapView ->
+            val puntoActualizado = GeoPoint(latitud, longitud)
+            mapView.controller.animateTo(puntoActualizado)
+
+            val marcador = mapView.overlays.filterIsInstance<Marker>().find { it.id == "marcador_gasto" }
+            if (marcador != null) {
+                marcador.position = puntoActualizado
+                mapView.invalidate()
+            }
+        },
         modifier = modifier
             .fillMaxWidth()
-            .height(200.dp),
-        cameraPositionState = camara,
-        uiSettings = MapUiSettings(zoomControlsEnabled = true),
-        onMapClick = onMover
-    ) {
-        Marker(state = marcador)
-    }
+            .height(200.dp)
+    )
 }

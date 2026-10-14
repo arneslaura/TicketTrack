@@ -4,16 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cloudinary.android.MediaManager
 import com.example.tickettrack.ui.theme.TicketTrackTheme
 import com.example.tickettrack.view.AddGastoScreen
 import com.example.tickettrack.view.DetailGastoScreen
@@ -29,6 +27,18 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // INICIALIZACIÓN DE CLOUDINARY
+        try {
+            val config = mapOf(
+                "cloud_name" to BuildConfig.CLOUDINARY_CLOUD_NAME,
+                "api_key" to BuildConfig.CLOUDINARY_API_KEY,
+                "api_secret" to BuildConfig.CLOUDINARY_API_SECRET
+            )
+            MediaManager.init(this, config)
+        } catch (e: Exception) {
+            // Si ya se inicializó (ej: al girar la pantalla), lo ignoramos silenciosamente
+        }
 
         setContent {
             TicketTrackTheme {

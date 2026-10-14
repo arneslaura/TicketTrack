@@ -120,10 +120,6 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            TextButton(onClick = { dialogoRecordatorio = true }) {
-                Text("Recordatorio a las ${horaRecordatorio.texto()}")
-            }
-
             OutlinedButton(
                 onClick = onAbrirResumen,
                 modifier = Modifier.fillMaxWidth()

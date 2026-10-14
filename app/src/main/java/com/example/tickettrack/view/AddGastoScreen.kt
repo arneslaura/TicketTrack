@@ -338,26 +338,27 @@ fun AddGastoScreen(
 
             if (latitud != null && longitud != null) {
                 Spacer(modifier = Modifier.height(12.dp))
-                if (BuildConfig.MAPS_ENABLED) {
-                    MapaGasto(
-                        latitud = latitud!!,
-                        longitud = longitud!!,
-                        onMover = { punto ->
-                            latitud = punto.latitude
-                            longitud = punto.longitude
-                            scope.launch {
-                                etiquetaDeLugar(context, punto.latitude, punto.longitude)?.let {
-                                    lugar = it
-                                }
+
+                MapaGasto(
+                    latitud = latitud!!,
+                    longitud = longitud!!,
+                    // Recibimos los dos números directamente
+                    onMover = { nuevaLat, nuevaLon ->
+                        latitud = nuevaLat
+                        longitud = nuevaLon
+                        scope.launch {
+                            etiquetaDeLugar(context, nuevaLat, nuevaLon)?.let {
+                                lugar = it
                             }
                         }
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Tocá el mapa para ajustar el punto",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Tocá el mapa para ajustar el punto",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
 
             if (avisoUbicacion != null) {

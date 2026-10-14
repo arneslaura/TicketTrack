@@ -34,7 +34,7 @@ object Recordatorios {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return HoraRecordatorio(
             hora = prefs.getInt(CLAVE_HORA, 21),
-            minuto = prefs.getInt(CLAVE_MINUTO, 0)
+            minuto = prefs.getInt(CLAVE_MINUTO, 45)
         )
     }
 
@@ -89,6 +89,8 @@ object Recordatorios {
             .setContentText("¿Cargaste tus gastos de hoy?")
             .setContentIntent(abrirApp)
             .setAutoCancel(true)
+            .setOngoing(true)
+            .setTimeoutAfter(10 * 60 * 1000L)
             .build()
 
         manager.notify(NOTIFICACION_ID, notificacion)

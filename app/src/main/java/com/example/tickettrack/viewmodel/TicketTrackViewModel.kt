@@ -4,6 +4,9 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.cloudinary.android.MediaManager
+import com.cloudinary.android.callback.ErrorInfo
+import com.cloudinary.android.callback.UploadCallback
 import com.example.tickettrack.data.comprimirTicket
 import com.example.tickettrack.model.CategoriaGasto
 import com.example.tickettrack.model.Gasto
@@ -17,14 +20,15 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageMetadata
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class TicketTrackViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -39,9 +43,8 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
     private val _errorAuth = MutableStateFlow<String?>(null)
     val errorAuth: StateFlow<String?> = _errorAuth
 
-    // Instancia de la base de datos y de las fotos
+    // Instancia de la base de datos
     private val db = FirebaseFirestore.getInstance()
-    private val storage = FirebaseStorage.getInstance()
 
     private val _guardando = MutableStateFlow(false)
     val guardando = _guardando.asStateFlow()
@@ -172,7 +175,10 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
                 _guardando.value = true
                 _errorGasto.value = null
                 val gastoId = UUID.randomUUID().toString()
+
+                // Subida usando Cloudinary
                 val photoUrl = fotoLocal?.let { subirFoto(usuarioActual.uid, gastoId, it) }
+
                 val nuevoGasto = Gasto(
                     id = gastoId,
                     userId = usuarioActual.uid,
@@ -240,22 +246,13 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    // Borra el documento y, si había, el archivo de la foto.
+    // Borra el documento en Firestore
     fun eliminarGasto(gastoId: String, onSuccess: () -> Unit) {
         val usuarioActual = _usuario.value ?: return
         val esSuyo = _gastos.value.any { it.id == gastoId && it.userId == usuarioActual.uid }
         if (!esSuyo) return
 
         viewModelScope.launch {
-            try {
-                storage.reference
-                    .child("users/${usuarioActual.uid}/tickets/$gastoId.jpg")
-                    .delete()
-                    .await()
-            } catch (_: Exception) {
-                // El gasto puede no tener foto.
-            }
-
             db.collection("gastos")
                 .document(gastoId)
                 .delete()
@@ -302,21 +299,36 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     private fun mensajeErrorGasto(error: Exception): String {
-        val texto = error.localizedMessage.orEmpty()
-        return if (texto.contains("does not exist at location", ignoreCase = true)) {
-            "No se pudo subir la foto. Creá Storage en Firebase y publicá las reglas de storage.rules."
-        } else {
-            texto.ifBlank { "No se pudo guardar el gasto" }
-        }
+        return error.localizedMessage?.ifBlank { "No se pudo guardar el gasto" } ?: "No se pudo guardar el gasto"
     }
 
+    // Sube la foto a Cloudinary y devuelve el enlace web seguro
     private suspend fun subirFoto(uid: String, gastoId: String, uri: Uri): String {
         val bytes = comprimirTicket(getApplication(), uri)
-        val metadata = StorageMetadata.Builder()
-            .setContentType("image/jpeg")
-            .build()
-        val ref = storage.reference.child("users/$uid/tickets/$gastoId.jpg")
-        ref.putBytes(bytes, metadata).await()
-        return ref.downloadUrl.await().toString()
+
+        return suspendCancellableCoroutine { continuation ->
+            MediaManager.get().upload(bytes)
+                .option("folder", "tickets/$uid")
+                .option("public_id", gastoId)
+                .callback(object : UploadCallback {
+                    override fun onStart(requestId: String?) {}
+                    override fun onProgress(requestId: String?, bytes: Long, totalBytes: Long) {}
+
+                    override fun onSuccess(requestId: String?, resultData: MutableMap<Any?, Any?>?) {
+                        val url = resultData?.get("secure_url") as? String
+                        if (url != null) {
+                            continuation.resume(url)
+                        } else {
+                            continuation.resumeWithException(Exception("Error al obtener la URL de Cloudinary"))
+                        }
+                    }
+
+                    override fun onError(requestId: String?, error: ErrorInfo?) {
+                        continuation.resumeWithException(Exception(error?.description ?: "Error al subir la foto"))
+                    }
+
+                    override fun onReschedule(requestId: String?, error: ErrorInfo?) {}
+                }).dispatch()
+        }
     }
 }
