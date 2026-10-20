@@ -1,148 +1,139 @@
 package com.example.tickettrack.view
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import coil.compose.AsyncImage
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.example.tickettrack.data.textoUbicacion
+import com.example.tickettrack.model.CategoriaGasto
 import com.example.tickettrack.model.Gasto
+import com.example.tickettrack.model.PeriodoFiltro
+import com.example.tickettrack.model.filtrarGastos
+import com.example.tickettrack.model.formatoPesos
 import com.example.tickettrack.viewmodel.TicketTrackViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: TicketTrackViewModel,
-    onNavegarAddGasto: () -> Unit,
-    onAbrirGasto: (String) -> Unit,
-    onAbrirResumen: () -> Unit
+    onAbrirGasto: (String) -> Unit
 ) {
-    //obtener lista de gastos del view model
-    val context = LocalContext.current
     val gastos by viewModel.gastos.collectAsStateWithLifecycle()
-    val horaRecordatorio by viewModel.horaRecordatorio.collectAsStateWithLifecycle()
-    var dialogoRecordatorio by rememberSaveable { mutableStateOf(false) }
-    var avisoNotificacion by rememberSaveable { mutableStateOf<String?>(null) }
-    var probarAlPermitir by remember { mutableStateOf(false) }
-
-    val permisoNotificacion = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            avisoNotificacion = null
-            if (probarAlPermitir) viewModel.probarRecordatorio()
-        } else {
-            avisoNotificacion = "Activá las notificaciones para recibir el recordatorio."
-        }
-        probarAlPermitir = false
+    var categoriaNombre by rememberSaveable { mutableStateOf<String?>(null) }
+    var periodoNombre by rememberSaveable { mutableStateOf(PeriodoFiltro.TODOS.name) }
+    val periodo = PeriodoFiltro.valueOf(periodoNombre)
+    val categoria = categoriaNombre?.let { nombre ->
+        CategoriaGasto.entries.find { it.name == nombre }
     }
+    val visibles = filtrarGastos(gastos, categoria, periodo)
 
-    fun notificacionesPermitidas(): Boolean {
-        return Build.VERSION.SDK_INT < 33 ||
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
 
-    LaunchedEffect(Unit) {
-        viewModel.obtenerGastos()
-        if (Build.VERSION.SDK_INT >= 33 && !notificacionesPermitidas()) {
-            permisoNotificacion.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
+        Text(
+            text = "TicketTrack",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { onNavegarAddGasto() },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Text("+", style = MaterialTheme.typography.headlineMedium)
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
+        Spacer(modifier = Modifier.height(4.dp))
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp)
+        Text(
+            text = "Mis gastos",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "TicketTrack",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.primary
+            PeriodoFiltro.entries.forEach { opcion ->
+                FilterChip(
+                    selected = periodo == opcion,
+                    onClick = { periodoNombre = opcion.name },
+                    label = { Text(opcion.etiqueta) }
                 )
-
-                TextButton(onClick = { viewModel.salir() }) {
-                    Text("Salir")
-                }
             }
+        }
 
-            Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip(
+                selected = categoria == null,
+                onClick = { categoriaNombre = null },
+                label = { Text("Todas") }
+            )
+            CategoriaGasto.entries.forEach { opcion ->
+                FilterChip(
+                    selected = categoria == opcion,
+                    onClick = { categoriaNombre = opcion.name },
+                    label = { Text(opcion.descripcion) }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+    
+        if (visibles.isEmpty()) {
             Text(
-                text = "Mis Gastos",
-                style = MaterialTheme.typography.titleLarge,
+                text = if (gastos.isEmpty()) {
+                    "Todavía no hay gastos. Tocá + para cargar el primero."
+                } else {
+                    "Ningún gasto coincide con esos filtros."
+                },
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground
             )
-
-            OutlinedButton(
-                onClick = onAbrirResumen,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Resumen del mes")
-            }
-
-            if (avisoNotificacion != null) {
-                Text(
-                    text = avisoNotificacion!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            //lista dinamica
+        } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(gastos) { gasto ->
+                items(visibles, key = { it.id }) { gasto ->
                     ItemGasto(
                         gasto = gasto,
                         onClick = { onAbrirGasto(gasto.id) }
@@ -150,72 +141,9 @@ fun HomeScreen(
                 }
             }
         }
-    }
-
-    if (dialogoRecordatorio) {
-        DialogoRecordatorio(
-            hora = horaRecordatorio.hora,
-            minuto = horaRecordatorio.minuto,
-            onGuardar = { hora, minuto ->
-                viewModel.cambiarHoraRecordatorio(hora, minuto)
-                dialogoRecordatorio = false
-            },
-            onProbar = {
-                if (notificacionesPermitidas()) {
-                    avisoNotificacion = null
-                    viewModel.probarRecordatorio()
-                } else if (Build.VERSION.SDK_INT >= 33) {
-                    probarAlPermitir = true
-                    permisoNotificacion.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
-            },
-            onCerrar = { dialogoRecordatorio = false }
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DialogoRecordatorio(
-    hora: Int,
-    minuto: Int,
-    onGuardar: (Int, Int) -> Unit,
-    onProbar: () -> Unit,
-    onCerrar: () -> Unit
-) {
-    val estado = rememberTimePickerState(
-        initialHour = hora,
-        initialMinute = minuto,
-        is24Hour = true
-    )
-
-    AlertDialog(
-        onDismissRequest = onCerrar,
-        title = { Text("Recordatorio diario") },
-        text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Todos los días pregunta si cargaste los gastos.")
-                Spacer(modifier = Modifier.height(12.dp))
-                TimeInput(state = estado)
-                TextButton(onClick = onProbar) {
-                    Text("Probar ahora")
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onGuardar(estado.hour, estado.minute) }) {
-                Text("Guardar")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onCerrar) {
-                Text("Cerrar")
             }
         }
-    )
-}
 
-// diseño individual de cada tarjeta de gasto
 @Composable
 fun ItemGasto(gasto: Gasto, onClick: () -> Unit) {
     val formatoFecha = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -249,25 +177,25 @@ fun ItemGasto(gasto: Gasto, onClick: () -> Unit) {
                 Text(
                     text = gasto.category.descripcion,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary // Usa tu verde
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Text(
                     text = formatoFecha.format(gasto.createdAt),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 textoUbicacion(gasto.placeLabel, gasto.latitude, gasto.longitude)?.let { lugar ->
                     Text(
                         text = lugar,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
             Text(
-                text = "$${gasto.amount}",
+                text = formatoPesos(gasto.amount),
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
