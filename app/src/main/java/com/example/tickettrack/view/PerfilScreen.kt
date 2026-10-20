@@ -5,37 +5,30 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimeInput
-import androidx.compose.material3.rememberTimePickerState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.example.tickettrack.ui.theme.ModoTema
 import com.example.tickettrack.viewmodel.TicketTrackViewModel
 
@@ -46,6 +39,7 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
     val usuario by viewModel.usuario.collectAsStateWithLifecycle()
     val horaRecordatorio by viewModel.horaRecordatorio.collectAsStateWithLifecycle()
     val modoTema by viewModel.modoTema.collectAsStateWithLifecycle()
+
     var dialogoRecordatorio by rememberSaveable { mutableStateOf(false) }
     var avisoNotificacion by rememberSaveable { mutableStateOf<String?>(null) }
     var probarAlPermitir by remember { mutableStateOf(false) }
@@ -57,78 +51,205 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
             avisoNotificacion = null
             if (probarAlPermitir) viewModel.probarRecordatorio()
         } else {
-            avisoNotificacion = "Activá las notificaciones para recibir el recordatorio."
+            avisoNotificacion = "Activá las notificaciones para usar el recordatorio."
+            viewModel.cambiarHoraRecordatorio(horaRecordatorio.hora, horaRecordatorio.minuto, false)
         }
         probarAlPermitir = false
     }
 
     fun notificacionesPermitidas(): Boolean {
         return Build.VERSION.SDK_INT < 33 ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
     }
 
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= 33 && !notificacionesPermitidas()) {
-            permisoNotificacion.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
-
+    // Dividimos la pantalla en una columna principal
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp)
+        modifier = Modifier.fillMaxSize()
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(text = "Perfil", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = usuario?.email ?: "Sesión iniciada",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-
-        Spacer(modifier = Modifier.height(28.dp))
-        Text(text = "Apariencia", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
-        ModoTema.entries.forEach { modo ->
-            FilterChip(
-                selected = modoTema == modo,
-                onClick = { viewModel.cambiarModoTema(modo) },
-                label = { Text(modo.etiqueta) },
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-        Text(text = "Recordatorio", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Todos los días a las ${horaRecordatorio.texto()}: ¿Cargaste tus gastos de hoy?",
-            style = MaterialTheme.typography.bodyLarge
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        OutlinedButton(
-            onClick = { dialogoRecordatorio = true },
-            modifier = Modifier.fillMaxWidth()
+        // PARTE SUPERIOR (Scrolleable)
+        Column(
+            modifier = Modifier
+                .weight(1f) // Esto empuja al botón de abajo hacia el fondo
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Cambiar hora")
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 1. TARJETA DE USUARIO
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (usuario?.photoUrl != null) {
+                        AsyncImage(
+                            model = usuario?.photoUrl,
+                            contentDescription = "Foto de perfil",
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.AccountCircle,
+                            contentDescription = "Perfil genérico",
+                            modifier = Modifier.size(80.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val nombre = usuario?.displayName
+                    if (!nombre.isNullOrBlank()) {
+                        Text(
+                            text = nombre,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Text(
+                        text = usuario?.email ?: "Sesión iniciada",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // 2. SECCIÓN CONFIGURACIÓN
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Configuración",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+                )
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+
+                        // APARIENCIA
+                        Text(text = "Apariencia", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { viewModel.cambiarModoTema(ModoTema.CLARO) },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (modoTema == ModoTema.CLARO) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                                )
+                            ) {
+                                Icon(Icons.Filled.WbSunny, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Día")
+                            }
+
+                            OutlinedButton(
+                                onClick = { viewModel.cambiarModoTema(ModoTema.OSCURO) },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (modoTema == ModoTema.OSCURO) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                                )
+                            ) {
+                                Icon(Icons.Filled.DarkMode, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Noche")
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+                        HorizontalDivider()
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // RECORDATORIO
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Filled.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Recordatorio diario", style = MaterialTheme.typography.titleMedium)
+                                Text("Avisar para cargar gastos", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Switch(
+                                checked = horaRecordatorio.activo,
+                                onCheckedChange = { encender ->
+                                    if (encender && !notificacionesPermitidas()) {
+                                        permisoNotificacion.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    } else {
+                                        viewModel.cambiarHoraRecordatorio(horaRecordatorio.hora, horaRecordatorio.minuto, encender)
+                                    }
+                                }
+                            )
+                        }
+
+                        // Si está encendido, mostramos a qué hora
+                        if (horaRecordatorio.activo) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(MaterialTheme.shapes.small)
+                                    .clickable { dialogoRecordatorio = true }
+                                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Hora del aviso", style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    text = horaRecordatorio.texto(),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            if (avisoNotificacion != null) {
+                                Text(text = avisoNotificacion!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        if (avisoNotificacion != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = avisoNotificacion!!, color = MaterialTheme.colorScheme.error)
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-        Button(
-            onClick = { viewModel.salir() },
-            modifier = Modifier.fillMaxWidth()
+        // PARTE INFERIOR (Fija al fondo)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
-            Text("Cerrar sesión")
+            OutlinedButton(
+                onClick = { viewModel.salir() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Icon(Icons.Filled.ExitToApp, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Cerrar sesión")
+            }
         }
-        Spacer(modifier = Modifier.height(24.dp))
     }
 
     if (dialogoRecordatorio) {
@@ -136,7 +257,7 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
             hora = horaRecordatorio.hora,
             minuto = horaRecordatorio.minuto,
             onGuardar = { hora, minuto ->
-                viewModel.cambiarHoraRecordatorio(hora, minuto)
+                viewModel.cambiarHoraRecordatorio(hora, minuto, true)
                 dialogoRecordatorio = false
             },
             onProbar = {
@@ -170,22 +291,21 @@ private fun DialogoRecordatorio(
 
     AlertDialog(
         onDismissRequest = onCerrar,
-        title = { Text("Recordatorio diario") },
+        title = { Text("Hora del aviso") },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Todos los días pregunta si cargaste los gastos.")
-                Spacer(modifier = Modifier.height(12.dp))
                 TimeInput(state = estado)
-                TextButton(onClick = onProbar) { Text("Probar ahora") }
+                Spacer(modifier = Modifier.height(16.dp))
+                TextButton(onClick = onProbar) { Text("Hacer prueba de sonido") }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onGuardar(estado.hour, estado.minute) }) {
+            Button(onClick = { onGuardar(estado.hour, estado.minute) }) {
                 Text("Guardar")
             }
         },
         dismissButton = {
-            TextButton(onClick = onCerrar) { Text("Cerrar") }
+            TextButton(onClick = onCerrar) { Text("Cancelar") }
         }
     )
 }

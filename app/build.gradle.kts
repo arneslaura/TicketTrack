@@ -137,4 +137,6 @@ dependencies {
     implementation("org.osmdroid:osmdroid-android:6.1.18")
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation("com.cloudinary:cloudinary-android:2.5.0")
+    implementation("com.google.maps.android:maps-compose:4.3.3")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
 }

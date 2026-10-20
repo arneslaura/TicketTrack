@@ -1,6 +1,5 @@
 package com.example.tickettrack.view
 
-import android.preference.PreferenceManager
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -10,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory // <-- ESTE IMPORT ES NUEVO
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
@@ -22,15 +22,13 @@ fun MapaGasto(
     modifier: Modifier = Modifier,
     onMover: ((Double, Double) -> Unit)? = null
 ) {
-    val context = LocalContext.current
-    Configuration.getInstance().userAgentValue = "TicketTrack_UNAJ_Laura_1.0"
-
-    val prefs = context.getSharedPreferences("osmdroid", android.content.Context.MODE_PRIVATE)
-    Configuration.getInstance().load(context, prefs)
 
     AndroidView(
         factory = { ctx ->
             MapView(ctx).apply {
+                // ESTA LÍNEA ES CLAVE: Fuerza al mapa a conectarse al servidor correcto
+                setTileSource(TileSourceFactory.MAPNIK)
+
                 setMultiTouchControls(true)
                 controller.setZoom(17.0)
 

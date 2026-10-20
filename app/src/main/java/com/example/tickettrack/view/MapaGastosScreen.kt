@@ -1,5 +1,6 @@
 package com.example.tickettrack.view
 
+import androidx.compose.foundation.gestures.snapping.SnapPosition.Center.position
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,13 +21,14 @@ import com.example.tickettrack.model.formatoPesos
 import com.example.tickettrack.viewmodel.TicketTrackViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import kotlin.collections.map
+import com.google.android.gms.maps.model.LatLng
 
 private val BuenosAires = LatLng(-34.6037, -58.3816)
 

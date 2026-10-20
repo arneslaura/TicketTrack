@@ -13,7 +13,9 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +28,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -33,12 +37,15 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,6 +63,9 @@ import coil.compose.AsyncImage
 import com.example.tickettrack.data.crearArchivoTicket
 import com.example.tickettrack.model.CategoriaGasto
 import com.example.tickettrack.viewmodel.TicketTrackViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,6 +87,11 @@ fun AddGastoScreen(
     var categoriaNombre by rememberSaveable { mutableStateOf(CategoriaGasto.OTROS.name) }
     var expanded by rememberSaveable { mutableStateOf(false) }
     var formularioListo by rememberSaveable { mutableStateOf(!editando) }
+
+    // Estados para la fecha
+    var fechaMillis by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
+    var mostrarDatePicker by rememberSaveable { mutableStateOf(false) }
+
     var fotoActualUrl by rememberSaveable { mutableStateOf<String?>(null) }
     var fotoNueva by rememberSaveable { mutableStateOf<String?>(null) }
     var fotoCamara by rememberSaveable { mutableStateOf<String?>(null) }
@@ -162,6 +177,7 @@ fun AddGastoScreen(
         latitud = gasto.latitude
         longitud = gasto.longitude
         lugar = gasto.placeLabel
+        fechaMillis = gasto.createdAt.time // Cargamos la fecha si estamos editando
         formularioListo = true
     }
 
@@ -195,6 +211,55 @@ fun AddGastoScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            // FECHA DEL GASTO
+            val fechaFormateada = remember(fechaMillis) {
+                SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(fechaMillis))
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { if (!guardando) mostrarDatePicker = true }
+            ) {
+                OutlinedTextField(
+                    value = fechaFormateada,
+                    onValueChange = {},
+                    label = { Text("Fecha") },
+                    readOnly = true,
+                    enabled = false, // Lo deshabilitamos para que el Box intercepte el clic
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledBorderColor = MaterialTheme.colorScheme.outline,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
+            }
+
+            if (mostrarDatePicker) {
+                val datePickerState = rememberDatePickerState(initialSelectedDateMillis = fechaMillis)
+                DatePickerDialog(
+                    onDismissRequest = { mostrarDatePicker = false },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            datePickerState.selectedDateMillis?.let { fechaMillis = it }
+                            mostrarDatePicker = false
+                        }) {
+                            Text("Aceptar")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { mostrarDatePicker = false }) {
+                            Text("Cancelar")
+                        }
+                    }
+                ) {
+                    DatePicker(state = datePickerState)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = amount,
@@ -342,7 +407,6 @@ fun AddGastoScreen(
                 MapaGasto(
                     latitud = latitud!!,
                     longitud = longitud!!,
-                    // Recibimos los dos números directamente
                     onMover = { nuevaLat, nuevaLon ->
                         latitud = nuevaLat
                         longitud = nuevaLon
@@ -374,6 +438,8 @@ fun AddGastoScreen(
                 onClick = {
                     if (montoDouble <= 0.0 || guardando) return@Button
                     val foto = fotoNueva?.let(Uri::parse)
+                    val fechaSeleccionada = Date(fechaMillis)
+
                     if (gastoId == null) {
                         viewModel.agregarGasto(
                             amount = montoDouble,
@@ -383,6 +449,7 @@ fun AddGastoScreen(
                             latitude = latitud,
                             longitude = longitud,
                             placeLabel = lugar,
+                            fecha = fechaSeleccionada,
                             onSuccess = onGuardado
                         )
                     } else {
@@ -395,6 +462,7 @@ fun AddGastoScreen(
                             latitude = latitud,
                             longitude = longitud,
                             placeLabel = lugar,
+                            fecha = fechaSeleccionada,
                             onSuccess = onGuardado
                         )
                     }

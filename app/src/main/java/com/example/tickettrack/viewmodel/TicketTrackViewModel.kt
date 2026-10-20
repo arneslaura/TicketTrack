@@ -140,9 +140,9 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     // Configuración de recordatorios
-    fun cambiarHoraRecordatorio(hora: Int, minuto: Int) {
+    fun cambiarHoraRecordatorio(hora: Int, minuto: Int, activo: Boolean) {
         _horaRecordatorio.value =
-            Recordatorios.guardar(getApplication(), hora, minuto)
+            Recordatorios.guardar(getApplication(), hora, minuto, activo)
 
         Recordatorios.programar(getApplication())
     }
@@ -192,6 +192,7 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
         latitude: Double?,
         longitude: Double?,
         placeLabel: String?,
+        fecha: java.util.Date, // <-- ACÁ ENTRA LA FECHA ELEGIDA
         onSuccess: () -> Unit
     ) {
         val usuarioActual = _usuario.value ?: return
@@ -217,8 +218,8 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
                     latitude = latitude,
                     longitude = longitude,
                     placeLabel = placeLabel?.takeIf { it.isNotBlank() },
-                    createdAt = java.util.Date(),
-                    updatedAt = java.util.Date()
+                    createdAt = fecha, // <-- ACÁ GUARDAMOS LA FECHA ELEGIDA
+                    updatedAt = java.util.Date() // updatedAt sigue siendo el momento exacto actual
                 )
 
                 db.collection("gastos")
@@ -245,6 +246,7 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
         latitude: Double?,
         longitude: Double?,
         placeLabel: String?,
+        fecha: java.util.Date, // <-- ACÁ ENTRA LA FECHA ELEGIDA
         onSuccess: () -> Unit
     ) {
         val usuarioActual = _usuario.value ?: return
@@ -264,6 +266,7 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
                     "amount" to amount,
                     "category" to category.name,
                     "description" to description,
+                    "createdAt" to fecha, // <-- ACÁ ACTUALIZAMOS LA FECHA
                     "updatedAt" to java.util.Date()
                 )
 

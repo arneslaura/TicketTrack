@@ -18,7 +18,8 @@ import com.example.tickettrack.R
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
-data class HoraRecordatorio(val hora: Int, val minuto: Int) {
+// Agregamos el "activo" a la clase
+data class HoraRecordatorio(val hora: Int, val minuto: Int, val activo: Boolean = false) {
     fun texto(): String = "%02d:%02d".format(hora, minuto)
 }
 
@@ -26,6 +27,7 @@ object Recordatorios {
     private const val PREFS = "tickettrack_recordatorio"
     private const val CLAVE_HORA = "hora"
     private const val CLAVE_MINUTO = "minuto"
+    private const val CLAVE_ACTIVO = "activo"
     private const val CANAL = "recordatorios"
     private const val TRABAJO = "recordatorio_diario"
     private const val NOTIFICACION_ID = 21
@@ -34,25 +36,35 @@ object Recordatorios {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return HoraRecordatorio(
             hora = prefs.getInt(CLAVE_HORA, 21),
-            minuto = prefs.getInt(CLAVE_MINUTO, 45)
+            minuto = prefs.getInt(CLAVE_MINUTO, 0),
+            activo = prefs.getBoolean(CLAVE_ACTIVO, false) // Por defecto apagado
         )
     }
 
-    fun guardar(context: Context, hora: Int, minuto: Int): HoraRecordatorio {
+    fun guardar(context: Context, hora: Int, minuto: Int, activo: Boolean): HoraRecordatorio {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
             .putInt(CLAVE_HORA, hora)
             .putInt(CLAVE_MINUTO, minuto)
+            .putBoolean(CLAVE_ACTIVO, activo)
             .apply()
-        return HoraRecordatorio(hora, minuto)
+        return HoraRecordatorio(hora, minuto, activo)
     }
 
     fun programar(context: Context) {
-        encolar(context, ExistingWorkPolicy.REPLACE)
+        val config = leer(context)
+        if (config.activo) {
+            encolar(context, ExistingWorkPolicy.REPLACE)
+        } else {
+            cancelar(context)
+        }
     }
 
     fun programarSiguiente(context: Context) {
-        encolar(context, ExistingWorkPolicy.APPEND)
+        val config = leer(context)
+        if (config.activo) {
+            encolar(context, ExistingWorkPolicy.APPEND)
+        }
     }
 
     fun cancelar(context: Context) {
@@ -89,8 +101,6 @@ object Recordatorios {
             .setContentText("¿Cargaste tus gastos de hoy?")
             .setContentIntent(abrirApp)
             .setAutoCancel(true)
-            .setOngoing(true)
-            .setTimeoutAfter(10 * 60 * 1000L)
             .build()
 
         manager.notify(NOTIFICACION_ID, notificacion)

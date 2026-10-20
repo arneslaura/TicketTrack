@@ -50,6 +50,8 @@ import com.example.tickettrack.view.PerfilScreen
 import com.example.tickettrack.view.ResumenScreen
 import com.example.tickettrack.viewmodel.TicketTrackViewModel
 
+// IMPORTANTE: Este import es nuevo para configurar el mapa
+import org.osmdroid.config.Configuration
 
 class MainActivity : ComponentActivity() {
 
@@ -69,6 +71,12 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             // Si ya se inicializó (ej: al girar la pantalla), lo ignoramos silenciosamente
         }
+
+        // --- INICIALIZACIÓN DE OPENSTREETMAP ---
+        val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        org.osmdroid.config.Configuration.getInstance().load(applicationContext, prefs)
+        org.osmdroid.config.Configuration.getInstance().userAgentValue = "TicketTrack_UNAJ_Laura_App_v2"
+        // ---------------------------------------
 
         setContent {
             val modoTema by viewModel.modoTema.collectAsStateWithLifecycle()
@@ -110,10 +118,10 @@ fun EnrutadorDeSesion(viewModel: TicketTrackViewModel) {
         } else {
             viewModel.obtenerGastos()
             val faltaPermiso = Build.VERSION.SDK_INT >= 33 &&
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) != PackageManager.PERMISSION_GRANTED
             if (faltaPermiso) {
                 permisoNotificacion.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
@@ -228,3 +236,4 @@ fun EnrutadorDeSesion(viewModel: TicketTrackViewModel) {
         }
     }
 }
+
