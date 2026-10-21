@@ -80,6 +80,11 @@ android {
             "CLOUDINARY_API_SECRET",
             buildConfigString("CLOUDINARY_API_SECRET")
         )
+        buildConfigField(
+            "String",
+            "GEMINI_API_KEY",
+            buildConfigString("GEMINI_API_KEY")
+        )
     }
 
     buildTypes {
