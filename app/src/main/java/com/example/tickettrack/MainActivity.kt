@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PieChart
@@ -42,6 +43,7 @@ import com.cloudinary.android.MediaManager
 import com.example.tickettrack.ui.theme.ModoTema
 import com.example.tickettrack.ui.theme.TicketTrackTheme
 import com.example.tickettrack.view.AddGastoScreen
+import com.example.tickettrack.view.AsistenteScreen
 import com.example.tickettrack.view.DetailGastoScreen
 import com.example.tickettrack.view.HomeScreen
 import com.example.tickettrack.view.LoginScreen
@@ -133,7 +135,7 @@ fun EnrutadorDeSesion(viewModel: TicketTrackViewModel) {
         return
     }
 
-    val esPestana = pantallaActual in setOf("home", "mapa", "resumen", "perfil")
+    val esPestana = pantallaActual in setOf("home", "mapa", "resumen", "asistente", "perfil")
 
     fun abrirGasto(id: String, origen: String) {
         gastoIdSeleccionado = id
@@ -205,6 +207,12 @@ fun EnrutadorDeSesion(viewModel: TicketTrackViewModel) {
                     label = { Text("Resumen") }
                 )
                 NavigationBarItem(
+                    selected = pantallaActual == "asistente",
+                    onClick = { pantallaActual = "asistente" },
+                    icon = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
+                    label = { Text("IA") }
+                )
+                NavigationBarItem(
                     selected = pantallaActual == "perfil",
                     onClick = { pantallaActual = "perfil" },
                     icon = { Icon(Icons.Filled.Person, contentDescription = null) },
@@ -227,6 +235,7 @@ fun EnrutadorDeSesion(viewModel: TicketTrackViewModel) {
                     viewModel = viewModel,
                     onAbrirGasto = { id -> abrirGasto(id, "mapa") }
                 )
+                "asistente" -> AsistenteScreen(viewModel)
                 "resumen" -> ResumenScreen(
                     viewModel = viewModel,
                     onAbrirGasto = { id -> abrirGasto(id, "resumen") }

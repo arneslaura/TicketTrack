@@ -6,7 +6,9 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tickettrack.data.FotosCloudinary
+import com.example.tickettrack.data.GeminiCliente
 import com.example.tickettrack.data.comprimirTicket
+import com.example.tickettrack.model.SugerenciaGasto
 import com.example.tickettrack.model.CategoriaGasto
 import com.example.tickettrack.model.Gasto
 import com.example.tickettrack.notification.HoraRecordatorio
@@ -154,6 +156,54 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
     // Cambiar el tema de la aplicación
     fun cambiarModoTema(modo: ModoTema) {
         _modoTema.value = Apariencia.guardar(getApplication(), modo)
+    }
+
+    fun leerTicket(
+        uri: Uri,
+        onListo: (SugerenciaGasto) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val bytes = comprimirTicket(getApplication(), uri)
+                val sugerencia = withContext(Dispatchers.IO) { GeminiCliente.leerTicket(bytes) }
+                onListo(sugerencia)
+            } catch (e: Exception) {
+                onError(e.message ?: "No se pudo leer el ticket")
+            }
+        }
+    }
+
+    fun interpretarFrase(
+        frase: String,
+        onListo: (SugerenciaGasto) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val sugerencia = withContext(Dispatchers.IO) { GeminiCliente.interpretarFrase(frase) }
+                onListo(sugerencia)
+            } catch (e: Exception) {
+                onError(e.message ?: "No se pudo interpretar el gasto")
+            }
+        }
+    }
+
+    fun preguntar(
+        historial: List<Pair<String, String>>,
+        onListo: (String) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val respuesta = withContext(Dispatchers.IO) {
+                    GeminiCliente.preguntar(_gastos.value, historial)
+                }
+                onListo(respuesta)
+            } catch (e: Exception) {
+                onError(e.message ?: "No se pudo consultar al asistente")
+            }
+        }
     }
 
     // Obtener los gastos del usuario autenticado

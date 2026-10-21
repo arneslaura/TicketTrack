@@ -1,0 +1,177 @@
+package com.example.tickettrack.data
+
+import android.util.Base64
+import com.example.tickettrack.BuildConfig
+import com.example.tickettrack.model.CategoriaGasto
+import com.example.tickettrack.model.Gasto
+import com.example.tickettrack.model.SugerenciaGasto
+import com.example.tickettrack.model.formatoPesos
+import com.example.tickettrack.model.resumenDelMes
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Locale
+
+object GeminiCliente {
+
+    private const val MODELO = "gemini-2.5-flash"
+
+    private const val INSTRUCCION_GASTO =
+        "Sos un asistente de gastos personales en Argentina. " +
+            "Respondé solo con JSON, sin markdown, con las claves " +
+            "amount (número con punto decimal, o null), " +
+            "category (una de: SUPERMERCADO, TRANSPORTE, SERVICIOS, OCIO, SALUD, OTROS), " +
+            "description (nota corta en español) y place (lugar o null)."
+
+    fun leerTicket(jpeg: ByteArray): SugerenciaGasto {
+        val partes = JSONArray()
+            .put(JSONObject().put("text", "Leé este ticket y completá el gasto."))
+            .put(
+                JSONObject().put(
+                    "inline_data",
+                    JSONObject()
+                        .put("mime_type", "image/jpeg")
+                        .put("data", Base64.encodeToString(jpeg, Base64.NO_WRAP))
+                )
+            )
+        val texto = generar(instruccion = INSTRUCCION_GASTO, partes = partes, json = true)
+        return sugerenciaDesde(texto)
+    }
+
+    fun interpretarFrase(frase: String): SugerenciaGasto {
+        val partes = JSONArray().put(
+            JSONObject().put("text", "El usuario dijo: \"$frase\"")
+        )
+        val texto = generar(instruccion = INSTRUCCION_GASTO, partes = partes, json = true)
+        return sugerenciaDesde(texto)
+    }
+
+    fun preguntar(gastos: List<Gasto>, historial: List<Pair<String, String>>): String {
+        val contenidos = JSONArray()
+        historial.forEach { (rol, texto) ->
+            contenidos.put(
+                JSONObject()
+                    .put("role", rol)
+                    .put("parts", JSONArray().put(JSONObject().put("text", texto)))
+            )
+        }
+        val instruccion = "Respondé en español, en pocas oraciones, sobre los gastos de TicketTrack. " +
+            "Usá solo los datos del contexto. Si no alcanza, decilo.\n\n" +
+            contextoDe(gastos)
+        return generar(instruccion = instruccion, contenidos = contenidos, json = false)
+    }
+
+    private fun contextoDe(gastos: List<Gasto>): String {
+        val resumen = resumenDelMes(gastos)
+        val fecha = SimpleDateFormat("dd/MM/yyyy", Locale("es", "AR"))
+        val porCategoria = resumen.porCategoria.joinToString("\n") {
+            "- ${it.categoria.descripcion}: ${formatoPesos(it.total)} (${it.cantidad})"
+        }
+        val recientes = gastos.take(40).joinToString("\n") { gasto ->
+            val lugar = gasto.placeLabel?.takeIf { it.isNotBlank() } ?: ""
+            "${fecha.format(gasto.createdAt)} | ${gasto.category.descripcion} | " +
+                "${formatoPesos(gasto.amount)} | ${gasto.description} | $lugar"
+        }
+        return "Mes ${resumen.titulo}: total ${formatoPesos(resumen.total)}, " +
+            "${resumen.cantidad} gastos, promedio ${formatoPesos(resumen.promedio)}.\n" +
+            porCategoria +
+            "\nGastos recientes:\n" +
+            recientes.ifBlank { "No hay gastos cargados." }
+    }
+
+    private fun generar(
+        instruccion: String,
+        partes: JSONArray? = null,
+        contenidos: JSONArray? = null,
+        json: Boolean
+    ): String {
+        val clave = BuildConfig.GEMINI_API_KEY
+        if (clave.isBlank()) {
+            throw IllegalStateException(
+                "Falta GEMINI_API_KEY en local.properties. Creala en aistudio.google.com/apikey."
+            )
+        }
+        val cuerpo = JSONObject()
+            .put(
+                "systemInstruction",
+                JSONObject().put("parts", JSONArray().put(JSONObject().put("text", instruccion)))
+            )
+            .put(
+                "contents",
+                contenidos ?: JSONArray().put(
+                    JSONObject().put("role", "user").put("parts", partes)
+                )
+            )
+        val config = JSONObject().put("temperature", if (json) 0.2 else 0.4)
+        if (json) config.put("responseMimeType", "application/json")
+        cuerpo.put("generationConfig", config)
+
+        val url = URL(
+            "https://generativelanguage.googleapis.com/v1beta/models/$MODELO:generateContent?key=$clave"
+        )
+        val conexion = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            connectTimeout = 20000
+            readTimeout = 45000
+        }
+        conexion.outputStream.use { it.write(cuerpo.toString().toByteArray(Charsets.UTF_8)) }
+        val codigo = conexion.responseCode
+        val respuesta = if (codigo in 200..299) {
+            conexion.inputStream.bufferedReader().use { it.readText() }
+        } else {
+            conexion.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+        }
+        if (codigo !in 200..299) {
+            throw IllegalStateException(mensajeError(codigo, respuesta))
+        }
+        val jsonRespuesta = JSONObject(respuesta)
+        val candidatos = jsonRespuesta.optJSONArray("candidates")
+            ?: throw IllegalStateException("Gemini no devolvió una respuesta.")
+        val texto = candidatos.getJSONObject(0)
+            .getJSONObject("content")
+            .getJSONArray("parts")
+            .getJSONObject(0)
+            .getString("text")
+        return texto.trim()
+    }
+
+    private fun sugerenciaDesde(texto: String): SugerenciaGasto {
+        val limpio = texto
+            .removePrefix("```json")
+            .removePrefix("```")
+            .removeSuffix("```")
+            .trim()
+        val json = JSONObject(limpio)
+        val nombre = json.optString("category")
+        val categoria = CategoriaGasto.entries.find {
+            it.name.equals(nombre, ignoreCase = true) ||
+                it.descripcion.equals(nombre, ignoreCase = true)
+        }
+        val amount = when {
+            !json.has("amount") || json.isNull("amount") -> null
+            else -> json.optDouble("amount").takeIf { !it.isNaN() && it > 0.0 }
+        }
+        val lugar = json.optString("place").takeIf { it.isNotBlank() && it != "null" }
+        return SugerenciaGasto(
+            amount = amount,
+            category = categoria,
+            description = json.optString("description"),
+            placeLabel = lugar
+        )
+    }
+
+    private fun mensajeError(codigo: Int, cuerpo: String): String {
+        val detalle = runCatching {
+            JSONObject(cuerpo).getJSONObject("error").optString("message")
+        }.getOrNull().orEmpty()
+        return when (codigo) {
+            400, 403 -> "La clave de Gemini no es válida. Revisá GEMINI_API_KEY en local.properties."
+            429 -> "Gemini está ocupado. Probá de nuevo en un rato."
+            else -> detalle.ifBlank { "No se pudo consultar a Gemini." }
+        }
+    }
+}

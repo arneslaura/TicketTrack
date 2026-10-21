@@ -1,6 +1,7 @@
+
 package com.example.tickettrack.view
 
-import androidx.compose.foundation.gestures.snapping.SnapPosition.Center.position
+import android.content.Context
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,107 +10,144 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.tickettrack.BuildConfig
 import com.example.tickettrack.model.formatoPesos
 import com.example.tickettrack.viewmodel.TicketTrackViewModel
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLngBounds
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerState
-import com.google.maps.android.compose.rememberCameraPositionState
-import kotlin.collections.map
-import com.google.android.gms.maps.model.LatLng
+import org.osmdroid.config.Configuration
+import org.osmdroid.util.BoundingBox
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
 
-private val BuenosAires = LatLng(-34.6037, -58.3816)
+private val BuenosAires = GeoPoint(-34.6037, -58.3816)
 
 @Composable
 fun MapaGastosScreen(
     viewModel: TicketTrackViewModel,
     onAbrirGasto: (String) -> Unit
 ) {
+    val context = LocalContext.current
+
     val gastos by viewModel.gastos.collectAsStateWithLifecycle()
-    val puntos = gastos.mapNotNull { gasto ->
-        val latitud = gasto.latitude
-        val longitud = gasto.longitude
-        if (latitud == null || longitud == null) null
-        else gasto to LatLng(latitud, longitud)
-    }
-    val sinUbicacion = gastos.size - puntos.size
-    val marcadores = remember(puntos.map { it.first.id to it.second }) {
-        puntos.map { (gasto, punto) -> gasto to MarkerState(position = punto) }
-    }
-    val camara = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(
-            puntos.firstOrNull()?.second ?: BuenosAires,
-            if (puntos.size == 1) 15f else 11f
+
+    // Configuración de OSMDroid.
+    Configuration.getInstance().apply {
+        userAgentValue = "TicketTrack_UNAJ_Laura_1.0"
+        load(
+            context,
+            context.getSharedPreferences(
+                "osmdroid",
+                Context.MODE_PRIVATE
+            )
         )
     }
 
-    LaunchedEffect(puntos.map { it.first.id }) {
-        if (puntos.isEmpty()) {
-            camara.position = CameraPosition.fromLatLngZoom(BuenosAires, 11f)
-            return@LaunchedEffect
-        }
-        try {
-            if (puntos.size == 1) {
-                camara.move(CameraUpdateFactory.newLatLngZoom(puntos.first().second, 15f))
-            } else {
-                val limites = LatLngBounds.builder().apply {
-                    puntos.forEach { include(it.second) }
-                }.build()
-                camara.move(CameraUpdateFactory.newLatLngBounds(limites, 80))
-            }
-        } catch (_: Exception) {
-            camara.move(CameraUpdateFactory.newLatLngZoom(puntos.first().second, 12f))
-        }
-    }
+    // Solo se incluyen gastos con coordenadas válidas.
+    val puntos = gastos.mapNotNull { gasto ->
+        val latitud = gasto.latitude
+        val longitud = gasto.longitude
 
-    if (!BuildConfig.MAPS_ENABLED) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = "Para ver el mapa agregá MAPS_API_KEY en local.properties.",
-                modifier = Modifier.padding(24.dp),
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
-        return
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        GoogleMap(
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = camara,
-            uiSettings = MapUiSettings(zoomControlsEnabled = true)
+        if (
+            latitud == null ||
+            longitud == null ||
+            latitud !in -90.0..90.0 ||
+            longitud !in -180.0..180.0
         ) {
-            marcadores.forEach { (gasto, estado) ->
-                Marker(
-                    state = estado,
-                    title = "${gasto.category.descripcion} · ${formatoPesos(gasto.amount)}",
-                    snippet = gasto.placeLabel,
-                    onClick = {
-                        onAbrirGasto(gasto.id)
-                        true
-                    }
-                )
-            }
+            null
+        } else {
+            gasto to GeoPoint(latitud, longitud)
         }
+    }
+
+    val sinUbicacion = gastos.size - puntos.size
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+
+            factory = { ctx ->
+                MapView(ctx).apply {
+                    setMultiTouchControls(true)
+                    controller.setZoom(12.0)
+                    controller.setCenter(BuenosAires)
+                }
+            },
+
+            update = { mapa ->
+                // Evita duplicar marcadores cuando Compose actualiza la vista.
+                mapa.overlays.removeAll { it is Marker }
+
+                puntos.forEach { (gasto, punto) ->
+                    val marcador = Marker(mapa).apply {
+                        position = punto
+
+                        title = "${gasto.category.descripcion} · ${
+                            formatoPesos(gasto.amount)
+                        }"
+
+                        snippet = gasto.placeLabel
+
+                        setAnchor(
+                            Marker.ANCHOR_CENTER,
+                            Marker.ANCHOR_BOTTOM
+                        )
+
+                        setOnMarkerClickListener { _, _ ->
+                            onAbrirGasto(gasto.id)
+                            true
+                        }
+                    }
+
+                    mapa.overlays.add(marcador)
+                }
+
+                // Ajusta la cámara según la cantidad de gastos.
+                when (puntos.size) {
+                    0 -> {
+                        mapa.controller.setZoom(12.0)
+                        mapa.controller.setCenter(BuenosAires)
+                    }
+
+                    1 -> {
+                        mapa.controller.setZoom(16.0)
+                        mapa.controller.setCenter(puntos.first().second)
+                    }
+
+                    else -> {
+                        val caja = BoundingBox.fromGeoPoints(
+                            puntos.map { it.second }
+                        )
+
+                        mapa.zoomToBoundingBox(caja, true, 80)
+                    }
+                }
+
+                mapa.invalidate()
+            }
+        )
 
         val aviso = when {
-            gastos.isEmpty() -> "Todavía no hay gastos. El mapa muestra Buenos Aires hasta que cargues uno con ubicación."
-            puntos.isEmpty() -> "Ningún gasto tiene ubicación. Al cargarlo, tocá Usar mi ubicación."
-            sinUbicacion > 0 -> "${puntos.size} en el mapa. $sinUbicacion sin ubicación."
-            else -> "${puntos.size} en el mapa. Tocá un marcador para ver el gasto."
+            gastos.isEmpty() ->
+                "Todavía no hay gastos. El mapa muestra Buenos Aires hasta que cargues uno con ubicación."
+
+            puntos.isEmpty() ->
+                "Ningún gasto tiene ubicación. Al cargarlo, tocá Usar mi ubicación."
+
+            sinUbicacion > 0 ->
+                "${puntos.size} en el mapa. $sinUbicacion sin ubicación."
+
+            else ->
+                "${puntos.size} en el mapa. Tocá un marcador para ver el gasto."
         }
+
         Surface(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
