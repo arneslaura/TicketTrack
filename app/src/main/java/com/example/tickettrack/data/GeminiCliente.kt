@@ -16,7 +16,7 @@ import java.util.Locale
 
 object GeminiCliente {
 
-    private const val MODELO = "gemini-2.5-flash"
+    private const val MODELO = "gemini-3.8-flash"
 
     private const val INSTRUCCION_GASTO =
         "Sos un asistente de gastos personales en Argentina. " +
@@ -104,7 +104,10 @@ object GeminiCliente {
                     JSONObject().put("role", "user").put("parts", partes)
                 )
             )
-        val config = JSONObject().put("temperature", if (json) 0.2 else 0.4)
+        val config = JSONObject().put(
+            "thinkingConfig",
+            JSONObject().put("thinkingLevel", "LOW")
+        )
         if (json) config.put("responseMimeType", "application/json")
         cuerpo.put("generationConfig", config)
 
@@ -128,15 +131,25 @@ object GeminiCliente {
         if (codigo !in 200..299) {
             throw IllegalStateException(mensajeError(codigo, respuesta))
         }
-        val jsonRespuesta = JSONObject(respuesta)
+        return textoDeRespuesta(JSONObject(respuesta))
+    }
+
+    private fun textoDeRespuesta(jsonRespuesta: JSONObject): String {
         val candidatos = jsonRespuesta.optJSONArray("candidates")
             ?: throw IllegalStateException("Gemini no devolvió una respuesta.")
-        val texto = candidatos.getJSONObject(0)
+        val partes = candidatos.getJSONObject(0)
             .getJSONObject("content")
             .getJSONArray("parts")
-            .getJSONObject(0)
-            .getString("text")
-        return texto.trim()
+        val textos = buildList {
+            for (i in 0 until partes.length()) {
+                val parte = partes.getJSONObject(i)
+                if (parte.optBoolean("thought")) continue
+                val texto = parte.optString("text")
+                if (texto.isNotBlank()) add(texto)
+            }
+        }
+        return textos.lastOrNull()?.trim()
+            ?: throw IllegalStateException("Gemini no devolvió un texto.")
     }
 
     private fun sugerenciaDesde(texto: String): SugerenciaGasto {

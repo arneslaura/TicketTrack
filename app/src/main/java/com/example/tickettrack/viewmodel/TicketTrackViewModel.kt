@@ -2,9 +2,14 @@
 package com.example.tickettrack.viewmodel
 
 import android.app.Application
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.tickettrack.data.CacheGastos
 import com.example.tickettrack.data.FotosCloudinary
 import com.example.tickettrack.data.GeminiCliente
 import com.example.tickettrack.data.comprimirTicket
@@ -13,6 +18,8 @@ import com.example.tickettrack.model.CategoriaGasto
 import com.example.tickettrack.model.Gasto
 import com.example.tickettrack.notification.HoraRecordatorio
 import com.example.tickettrack.notification.Recordatorios
+import com.example.tickettrack.ui.Idioma
+import com.example.tickettrack.ui.Idiomas
 import com.example.tickettrack.ui.theme.Apariencia
 import com.example.tickettrack.ui.theme.ModoTema
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -22,6 +29,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,17 +77,66 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
         MutableStateFlow(Apariencia.leer(getApplication()))
     val modoTema: StateFlow<ModoTema> = _modoTema.asStateFlow()
 
+    private val _idioma = MutableStateFlow(Idiomas.leer(getApplication()))
+    val idioma: StateFlow<Idioma> = _idioma.asStateFlow()
+
+    private val _enLinea = MutableStateFlow(true)
+    val enLinea: StateFlow<Boolean> = _enLinea.asStateFlow()
+
+    private val conectividad = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            _enLinea.value = true
+        }
+
+        override fun onLost(network: Network) {
+            _enLinea.value = hayInternet()
+        }
+    }
+
     init {
-        // Mantiene actualizado el estado de la sesión.
+        try {
+            db.firestoreSettings = FirebaseFirestoreSettings.Builder()
+                .setPersistenceEnabled(true)
+                .build()
+        } catch (_: Exception) {
+            // La persistencia ya quedó activa en un arranque anterior.
+        }
+        _enLinea.value = hayInternet()
+        val red = getApplication<Application>().getSystemService(ConnectivityManager::class.java)
+        red.registerNetworkCallback(
+            NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build(),
+            conectividad
+        )
+
         auth.addAuthStateListener { firebaseAuth ->
             _usuario.value = firebaseAuth.currentUser
 
             if (firebaseAuth.currentUser != null) {
                 Recordatorios.programar(getApplication())
             } else {
+                _gastos.value = emptyList()
                 Recordatorios.cancelar(getApplication())
             }
         }
+    }
+
+    override fun onCleared() {
+        val red = getApplication<Application>().getSystemService(ConnectivityManager::class.java)
+        runCatching { red.unregisterNetworkCallback(conectividad) }
+        super.onCleared()
+    }
+
+    fun cambiarIdioma(idioma: Idioma) {
+        _idioma.value = Idiomas.guardar(getApplication(), idioma)
+    }
+
+    private fun hayInternet(): Boolean {
+        val red = getApplication<Application>().getSystemService(ConnectivityManager::class.java)
+        val activa = red.activeNetwork ?: return false
+        val capacidades = red.getNetworkCapabilities(activa) ?: return false
+        return capacidades.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
     // Registro con email y contraseña
@@ -209,22 +266,26 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
     // Obtener los gastos del usuario autenticado
     fun obtenerGastos() {
         val usuarioActual = _usuario.value ?: return
+        val guardados = CacheGastos.leer(getApplication(), usuarioActual.uid)
+        if (guardados.isNotEmpty()) {
+            _gastos.value = guardados
+        }
 
         db.collection("gastos")
             .whereEqualTo("userId", usuarioActual.uid)
             .addSnapshotListener { snapshot, error ->
-                if (error != null) {
+                if (error != null || snapshot == null) {
                     return@addSnapshotListener
                 }
 
-                if (snapshot != null) {
-                    val listaGastos = snapshot.documents.mapNotNull { documento ->
-                        documento.toObject(Gasto::class.java)
-                            ?.copy(id = documento.id)
-                    }
+                val listaGastos = snapshot.documents.mapNotNull { documento ->
+                    documento.toObject(Gasto::class.java)
+                        ?.copy(id = documento.id)
+                }.sortedByDescending { it.createdAt }
 
-                    _gastos.value =
-                        listaGastos.sortedByDescending { it.createdAt }
+                _gastos.value = listaGastos
+                viewModelScope.launch(Dispatchers.IO) {
+                    CacheGastos.guardar(getApplication(), usuarioActual.uid, listaGastos)
                 }
             }
     }

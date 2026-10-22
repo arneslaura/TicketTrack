@@ -22,8 +22,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
-import com.example.tickettrack.BuildConfig
 import com.example.tickettrack.data.textoUbicacion
+import com.example.tickettrack.model.formatoPesos
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -80,25 +80,30 @@ fun DetailGastoScreen(
                     style = MaterialTheme.typography.bodyLarge
                 )
             } else {
-                Text(
-                    text = gasto.category.descripcion,
-                    style = MaterialTheme.typography.titleLarge,
+                androidx.compose.material3.Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
                     color = MaterialTheme.colorScheme.primary
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "$${gasto.amount}",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = formatoFecha.format(gasto.createdAt),
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 22.dp, vertical = 20.dp)) {
+                        Text(
+                            text = gasto.category.descripcion,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = formatoPesos(gasto.amount),
+                            style = MaterialTheme.typography.displaySmall,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Text(
+                            text = formatoFecha.format(gasto.createdAt),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f)
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -166,13 +171,11 @@ fun DetailGastoScreen(
                         text = textoLugar,
                         style = MaterialTheme.typography.bodyLarge
                     )
-                    if (BuildConfig.MAPS_ENABLED) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        MapaGasto(
-                            latitud = gasto.latitude,
-                            longitud = gasto.longitude
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    MapaGasto(
+                        latitud = gasto.latitude,
+                        longitud = gasto.longitude
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))

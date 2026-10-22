@@ -2,14 +2,16 @@ package com.example.tickettrack.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Paleta principal para TicketTrack
-val VerdePrincipal = Color(0xFF10B981)
-val VerdeOscuro = Color(0xFF047857)
-val VerdeClaro = Color(0xFFD1FAE5)
+val VerdePrincipal = Color(0xFF0C6B58)
+val VerdeOscuro = Color(0xFF084838)
+val VerdeClaro = Color(0xFFD8F3EA)
+val VerdeBrillo = Color(0xFF3EE0A4)
 
-val FondoClaro = Color(0xFFF9FAFB)
-val TextoOscuro = Color(0xFF1F2937)
-val FondoNoche = Color(0xFF0F172A)
-val SuperficieNoche = Color(0xFF1E293B)
-val TextoClaro = Color(0xFFF8FAFC)
-val ErrorRojo = Color(0xFFEF4444)
+val FondoClaro = Color(0xFFF3F6F4)
+val TextoOscuro = Color(0xFF14211C)
+val TextoSuave = Color(0xFF5C6E67)
+val FondoNoche = Color(0xFF0B100E)
+val SuperficieNoche = Color(0xFF151C19)
+val TextoClaro = Color(0xFFF4F7F5)
+val TextoSuaveNoche = Color(0xFFB7C6BF)
+val ErrorRojo = Color(0xFFDC3B3B)
