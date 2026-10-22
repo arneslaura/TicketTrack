@@ -10,20 +10,32 @@ import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -31,14 +43,19 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -146,11 +163,7 @@ fun AddGastoScreen(
                 } else {
                     latitud = actual.latitude
                     longitud = actual.longitude
-                    lugar = etiquetaDeLugar(
-                        context,
-                        actual.latitude,
-                        actual.longitude
-                    )
+                    lugar = etiquetaDeLugar(actual.latitude, actual.longitude)
                 }
             } catch (_: SecurityException) {
                 avisoUbicacion = "Falta el permiso de ubicación."
@@ -335,6 +348,11 @@ fun AddGastoScreen(
                 text = if (editando) "Editar gasto" else "Nuevo gasto",
                 style = MaterialTheme.typography.headlineMedium
             )
+            Text(
+                text = "Completalo a mano o contalo en una frase.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             if (editando && !formularioListo) {
                 Spacer(modifier = Modifier.height(24.dp))
@@ -350,33 +368,6 @@ fun AddGastoScreen(
                     "dd/MM/yyyy",
                     Locale.getDefault()
                 ).format(Date(fechaMillis))
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        if (!guardando) {
-                            mostrarDatePicker = true
-                        }
-                    }
-            ) {
-                OutlinedTextField(
-                    value = fechaFormateada,
-                    onValueChange = {},
-                    label = { Text("Fecha") },
-                    readOnly = true,
-                    enabled = false,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        disabledTextColor =
-                            MaterialTheme.colorScheme.onSurface,
-                        disabledBorderColor =
-                            MaterialTheme.colorScheme.outline,
-                        disabledLabelColor =
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
             }
 
             if (mostrarDatePicker) {
@@ -414,327 +405,346 @@ fun AddGastoScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Entrada de gastos mediante Gemini
-            Text(
-                text = "Contalo con Gemini",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = frase,
-                onValueChange = { frase = it },
-                label = {
-                    Text("Ejemplo: gasté 4500 en el súper")
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !guardando && !consultandoIa
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            SeccionFormulario(
+                titulo = "Con una frase",
+                color = MaterialTheme.colorScheme.primaryContainer
             ) {
-                OutlinedButton(
-                    onClick = {
-                        val permitido = ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.RECORD_AUDIO
-                        ) == PackageManager.PERMISSION_GRANTED
-
-                        if (permitido) {
-                            iniciarDictado()
-                        } else {
-                            permisoMicrofono.launch(
-                                Manifest.permission.RECORD_AUDIO
-                            )
-                        }
-                    },
-                    enabled = !guardando && !consultandoIa,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Dictar")
-                }
-
-                Button(
-                    onClick = {
-                        val texto = frase.trim()
-                        if (texto.isEmpty()) return@Button
-
-                        consultandoIa = true
-                        avisoIa = null
-
-                        viewModel.interpretarFrase(
-                            frase = texto,
-                            onListo = { sugerencia ->
-                                aplicarSugerencia(sugerencia)
-                                consultandoIa = false
-                            },
-                            onError = { mensaje ->
-                                avisoIa = mensaje
-                                consultandoIa = false
-                            }
-                        )
-                    },
-                    enabled = frase.isNotBlank() &&
-                            !guardando &&
-                            !consultandoIa,
-                    modifier = Modifier.weight(1f)
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.AutoAwesome,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        if (consultandoIa) {
-                            "Pensando..."
-                        } else {
-                            "Armar gasto"
-                        }
+                        text = "La IA completa monto, categoría y nota.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                TextField(
+                    value = frase,
+                    onValueChange = { frase = it },
+                    placeholder = { Text("Gasté 4500 en el súper") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !guardando && !consultandoIa,
+                    colors = coloresCampo(),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilledTonalButton(
+                        onClick = {
+                            val permitido = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.RECORD_AUDIO
+                            ) == PackageManager.PERMISSION_GRANTED
+                            if (permitido) {
+                                iniciarDictado()
+                            } else {
+                                permisoMicrofono.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        },
+                        enabled = !guardando && !consultandoIa,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.Mic, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Dictar")
+                    }
+                    Button(
+                        onClick = {
+                            val texto = frase.trim()
+                            if (texto.isEmpty()) return@Button
+                            consultandoIa = true
+                            avisoIa = null
+                            viewModel.interpretarFrase(
+                                frase = texto,
+                                onListo = { sugerencia ->
+                                    aplicarSugerencia(sugerencia)
+                                    consultandoIa = false
+                                },
+                                onError = { mensaje ->
+                                    avisoIa = mensaje
+                                    consultandoIa = false
+                                }
+                            )
+                        },
+                        enabled = frase.isNotBlank() && !guardando && !consultandoIa,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(if (consultandoIa) "Pensando..." else "Armar")
+                    }
+                }
+                if (avisoIa != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = avisoIa.orEmpty(),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
 
-            if (avisoIa != null) {
-                Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+
+            SeccionFormulario(titulo = "Datos del gasto") {
                 Text(
-                    text = avisoIa.orEmpty(),
-                    color = MaterialTheme.colorScheme.primary
+                    text = "Monto",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Monto
-            OutlinedTextField(
-                value = amount,
-                onValueChange = { amount = it },
-                label = { Text("Monto ($)") },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !guardando
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Categorías
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = {
-                    if (!guardando) {
-                        expanded = !expanded
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = categoriaSeleccionada.descripcion,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Categoría") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(
-                            expanded = expanded
+                TextField(
+                    value = amount,
+                    onValueChange = { amount = it },
+                    placeholder = {
+                        Text(
+                            text = "0",
+                            style = MaterialTheme.typography.displaySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth()
+                    prefix = {
+                        Text(
+                            text = "$",
+                            style = MaterialTheme.typography.displaySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    textStyle = MaterialTheme.typography.displaySmall,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    enabled = !guardando,
+                    colors = coloresCampo(),
+                    modifier = Modifier.fillMaxWidth()
                 )
-
-                ExposedDropdownMenu(
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                ExposedDropdownMenuBox(
                     expanded = expanded,
-                    onDismissRequest = {
-                        expanded = false
-                    }
-                ) {
-                    CategoriaGasto.entries.forEach { categoria ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(categoria.descripcion)
-                            },
-                            onClick = {
-                                categoriaNombre = categoria.name
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Descripción
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                label = { Text("Descripción (opcional)") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !guardando
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Comprobante
-            Text(
-                text = "Comprobante",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (vistaPrevia != null) {
-                AsyncImage(
-                    model = vistaPrevia,
-                    contentDescription = "Foto del ticket",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        val permitido = ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.CAMERA
-                        ) == PackageManager.PERMISSION_GRANTED
-
-                        if (permitido) {
-                            val uri = crearArchivoTicket(context)
-                            fotoCamara = uri.toString()
-                            camara.launch(uri)
-                        } else {
-                            permisoCamara.launch(
-                                Manifest.permission.CAMERA
-                            )
-                        }
-                    },
-                    enabled = !guardando,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Cámara")
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        galeria.launch(
-                            PickVisualMediaRequest(
-                                ActivityResultContracts.PickVisualMedia.ImageOnly
-                            )
-                        )
-                    },
-                    enabled = !guardando,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Galería")
-                }
-            }
-
-            if (fotoNueva != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedButton(
-                    onClick = {
-                        val uri = fotoNueva?.let(Uri::parse)
-                            ?: return@OutlinedButton
-
-                        consultandoIa = true
-                        avisoIa = null
-
-                        viewModel.leerTicket(
-                            uri = uri,
-                            onListo = { sugerencia ->
-                                aplicarSugerencia(sugerencia)
-                                consultandoIa = false
-                            },
-                            onError = { mensaje ->
-                                avisoIa = mensaje
-                                consultandoIa = false
-                            }
-                        )
-                    },
-                    enabled = !guardando && !consultandoIa,
+                    onExpandedChange = { if (!guardando) expanded = it },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        if (consultandoIa) {
-                            "Leyendo ticket..."
-                        } else {
-                            "Completar con la foto"
+                    Row(
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(colorCategoria(categoriaSeleccionada).copy(alpha = 0.16f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = iconoCategoria(categoriaSeleccionada),
+                                contentDescription = null,
+                                tint = colorCategoria(categoriaSeleccionada)
+                            )
                         }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Categoría",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = categoriaSeleccionada.descripcion,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                    }
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        CategoriaGasto.entries.forEach { categoria ->
+                            DropdownMenuItem(
+                                text = { Text(categoria.descripcion) },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = iconoCategoria(categoria),
+                                        contentDescription = null,
+                                        tint = colorCategoria(categoria)
+                                    )
+                                },
+                                onClick = {
+                                    categoriaNombre = categoria.name
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                TextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    placeholder = { Text("Nota, opcional") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !guardando,
+                    colors = coloresCampo()
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !guardando) {
+                            mostrarDatePicker = true
+                        }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.CalendarMonth,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Fecha",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = fechaFormateada,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            SeccionFormulario(titulo = "Comprobante") {
+                if (vistaPrevia != null) {
+                    AsyncImage(
+                        model = vistaPrevia,
+                        contentDescription = "Foto del ticket",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .clip(RoundedCornerShape(18.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilledTonalButton(
+                        onClick = {
+                            val permitido = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.CAMERA
+                            ) == PackageManager.PERMISSION_GRANTED
+                            if (permitido) {
+                                val uri = crearArchivoTicket(context)
+                                fotoCamara = uri.toString()
+                                camara.launch(uri)
+                            } else {
+                                permisoCamara.launch(Manifest.permission.CAMERA)
+                            }
+                        },
+                        enabled = !guardando,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.PhotoCamera, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Cámara")
+                    }
+                    FilledTonalButton(
+                        onClick = {
+                            galeria.launch(
+                                PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
+                            )
+                        },
+                        enabled = !guardando,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.PhotoLibrary, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Galería")
+                    }
+                }
+                if (fotoNueva != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            val uri = fotoNueva?.let(Uri::parse) ?: return@Button
+                            consultandoIa = true
+                            avisoIa = null
+                            viewModel.leerTicket(
+                                uri = uri,
+                                onListo = { sugerencia ->
+                                    aplicarSugerencia(sugerencia)
+                                    consultandoIa = false
+                                },
+                                onError = { mensaje ->
+                                    avisoIa = mensaje
+                                    consultandoIa = false
+                                }
+                            )
+                        },
+                        enabled = !guardando && !consultandoIa,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Filled.AutoAwesome, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(if (consultandoIa) "Leyendo ticket..." else "Completar con la foto")
+                    }
+                }
+                if (avisoFoto != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = avisoFoto.orEmpty(),
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }
 
-            if (avisoFoto != null) {
-                Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+
+            val textoLugar = textoUbicacion(lugar, latitud, longitud)
+
+            SeccionFormulario(titulo = "Lugar") {
                 Text(
-                    text = avisoFoto.orEmpty(),
-                    color = MaterialTheme.colorScheme.error
+                    text = textoLugar ?: "Todavía sin ubicación",
+                    style = MaterialTheme.typography.titleMedium
                 )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Ubicación
-            Text(
-                text = "Lugar",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            val textoLugar = textoUbicacion(
-                lugar,
-                latitud,
-                longitud
-            )
-
-            Text(
-                text = textoLugar ?: "Todavía sin ubicación",
-                style = MaterialTheme.typography.bodyLarge
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedButton(
-                onClick = {
-                    val permitido = ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED
-
-                    if (permitido) {
-                        tomarUbicacionActual()
-                    } else {
-                        permisoUbicacion.launch(
+                Spacer(modifier = Modifier.height(12.dp))
+                FilledTonalButton(
+                    onClick = {
+                        val permitido = ContextCompat.checkSelfPermission(
+                            context,
                             Manifest.permission.ACCESS_FINE_LOCATION
-                        )
-                    }
-                },
-                enabled = !guardando && !buscandoUbicacion,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    if (buscandoUbicacion) {
-                        "Buscando ubicación..."
-                    } else {
-                        "Usar mi ubicación"
-                    }
-                )
-            }
+                        ) == PackageManager.PERMISSION_GRANTED
+                        if (permitido) {
+                            tomarUbicacionActual()
+                        } else {
+                            permisoUbicacion.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                        }
+                    },
+                    enabled = !guardando && !buscandoUbicacion,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.MyLocation, contentDescription = null)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(if (buscandoUbicacion) "Buscando..." else "Usar mi ubicación")
+                }
 
             if (latitud != null && longitud != null) {
                 Spacer(modifier = Modifier.height(12.dp))
@@ -747,11 +757,7 @@ fun AddGastoScreen(
                         longitud = nuevaLon
 
                         scope.launch {
-                            etiquetaDeLugar(
-                                context,
-                                nuevaLat,
-                                nuevaLon
-                            )?.let {
+                            etiquetaDeLugar(nuevaLat, nuevaLon)?.let {
                                 lugar = it
                             }
                         }
@@ -766,15 +772,16 @@ fun AddGastoScreen(
                 )
             }
 
-            if (avisoUbicacion != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = avisoUbicacion.orEmpty(),
-                    color = MaterialTheme.colorScheme.error
-                )
+                if (avisoUbicacion != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = avisoUbicacion.orEmpty(),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             // Guardar o actualizar el gasto
             val montoDouble = montoDesdeTexto(amount)
@@ -816,7 +823,9 @@ fun AddGastoScreen(
                     }
                 },
                 enabled = montoDouble > 0.0 && !guardando,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp)
             ) {
                 Text(
                     when {
@@ -837,6 +846,37 @@ fun AddGastoScreen(
         }
     }
 }
+
+@Composable
+private fun SeccionFormulario(
+    titulo: String,
+    color: Color = MaterialTheme.colorScheme.surface,
+    contenido: @Composable ColumnScope.() -> Unit
+) {
+    Text(
+        text = titulo,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 6.dp, bottom = 8.dp)
+    )
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = color
+    ) {
+        Column(modifier = Modifier.padding(16.dp), content = contenido)
+    }
+}
+
+@Composable
+private fun coloresCampo() = TextFieldDefaults.colors(
+    focusedContainerColor = Color.Transparent,
+    unfocusedContainerColor = Color.Transparent,
+    disabledContainerColor = Color.Transparent,
+    focusedIndicatorColor = Color.Transparent,
+    unfocusedIndicatorColor = Color.Transparent,
+    disabledIndicatorColor = Color.Transparent
+)
 
 private fun montoDesdeTexto(texto: String): Double {
     val limpio = texto.trim()

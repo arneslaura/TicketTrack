@@ -318,15 +318,31 @@ private fun FormularioAuth(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(36.dp))
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.primary
+            ) {
+                Text(
+                    text = "TT",
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+            Spacer(modifier = Modifier.height(18.dp))
             Text(
                 text = "TicketTrack",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary
+                style = MaterialTheme.typography.headlineLarge
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Tus gastos, en un solo lugar",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(28.dp))
             Text(text = titulo, style = MaterialTheme.typography.titleLarge)
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             contenido()
         }
     }

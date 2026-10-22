@@ -3,7 +3,7 @@ package com.example.tickettrack.ui.theme
 import android.content.Context
 
 enum class ModoTema(val etiqueta: String) {
-    SISTEMA("Como el celular"),
+    SISTEMA("Sistema"),
     CLARO("Día"),
     OSCURO("Noche")
 }

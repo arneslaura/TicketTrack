@@ -86,14 +86,24 @@ fun ResumenScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text(
-            text = formatoPesos(resumen.total),
-            style = MaterialTheme.typography.displaySmall
-        )
-        Text(
-            text = if (resumen.cantidad == 1) "1 gasto" else "${resumen.cantidad} gastos",
-            style = MaterialTheme.typography.bodyLarge
-        )
+        androidx.compose.material3.Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.primary
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 22.dp, vertical = 20.dp)) {
+                Text(
+                    text = formatoPesos(resumen.total),
+                    style = MaterialTheme.typography.displaySmall,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+                Text(
+                    text = if (resumen.cantidad == 1) "1 gasto" else "${resumen.cantidad} gastos",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f)
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -128,7 +138,7 @@ fun ResumenScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onAbrirGasto(mayor.id) },
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -208,7 +218,7 @@ private fun TarjetaDato(
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = titulo, style = MaterialTheme.typography.bodySmall)

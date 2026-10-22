@@ -9,12 +9,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.tickettrack.ui.Idioma
+import com.example.tickettrack.ui.texto
 import com.example.tickettrack.ui.theme.ModoTema
 import com.example.tickettrack.viewmodel.TicketTrackViewModel
 
@@ -39,6 +43,7 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
     val usuario by viewModel.usuario.collectAsStateWithLifecycle()
     val horaRecordatorio by viewModel.horaRecordatorio.collectAsStateWithLifecycle()
     val modoTema by viewModel.modoTema.collectAsStateWithLifecycle()
+    val idioma by viewModel.idioma.collectAsStateWithLifecycle()
 
     var dialogoRecordatorio by rememberSaveable { mutableStateOf(false) }
     var avisoNotificacion by rememberSaveable { mutableStateOf<String?>(null) }
@@ -80,8 +85,8 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
             // 1. TARJETA DE USUARIO
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = MaterialTheme.shapes.large
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                shape = RoundedCornerShape(28.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -144,34 +149,53 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
                     Column(modifier = Modifier.padding(16.dp)) {
 
                         // APARIENCIA
-                        Text(text = "Apariencia", style = MaterialTheme.typography.titleMedium)
+                        Text(text = texto(idioma, "Apariencia", "Appearance", "Aparência"), style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            OutlinedButton(
+                            BotonApariencia(
+                                texto = texto(idioma, "Sistema", "System", "Sistema"),
+                                elegido = modoTema == ModoTema.SISTEMA,
+                                icono = Icons.Filled.PhoneAndroid,
+                                onClick = { viewModel.cambiarModoTema(ModoTema.SISTEMA) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            BotonApariencia(
+                                texto = texto(idioma, "Día", "Day", "Dia"),
+                                elegido = modoTema == ModoTema.CLARO,
+                                icono = Icons.Filled.WbSunny,
                                 onClick = { viewModel.cambiarModoTema(ModoTema.CLARO) },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = if (modoTema == ModoTema.CLARO) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-                                )
-                            ) {
-                                Icon(Icons.Filled.WbSunny, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Día")
-                            }
-
-                            OutlinedButton(
+                                modifier = Modifier.weight(1f)
+                            )
+                            BotonApariencia(
+                                texto = texto(idioma, "Noche", "Night", "Noite"),
+                                elegido = modoTema == ModoTema.OSCURO,
+                                icono = Icons.Filled.DarkMode,
                                 onClick = { viewModel.cambiarModoTema(ModoTema.OSCURO) },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = if (modoTema == ModoTema.OSCURO) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-                                )
-                            ) {
-                                Icon(Icons.Filled.DarkMode, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Noche")
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(text = texto(idioma, "Idioma", "Language", "Idioma"), style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Idioma.entries.forEach { opcion ->
+                                OutlinedButton(
+                                    onClick = { viewModel.cambiarIdioma(opcion) },
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = if (idioma == opcion) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                                    )
+                                ) {
+                                    Text(opcion.etiqueta, style = MaterialTheme.typography.labelMedium)
+                                }
                             }
                         }
 
@@ -187,8 +211,8 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
                             Icon(Icons.Filled.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Recordatorio diario", style = MaterialTheme.typography.titleMedium)
-                                Text("Avisar para cargar gastos", style = MaterialTheme.typography.bodySmall)
+                                Text(texto(idioma, "Recordatorio diario", "Daily reminder", "Lembrete diário"), style = MaterialTheme.typography.titleMedium)
+                                Text(texto(idioma, "Avisar para cargar gastos", "Remind me to add expenses", "Avisar para registrar gastos"), style = MaterialTheme.typography.bodySmall)
                             }
                             Switch(
                                 checked = horaRecordatorio.activo,
@@ -214,7 +238,7 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Hora del aviso", style = MaterialTheme.typography.bodyLarge)
+                                Text(texto(idioma, "Hora del aviso", "Reminder time", "Hora do aviso"), style = MaterialTheme.typography.bodyLarge)
                                 Text(
                                     text = horaRecordatorio.texto(),
                                     style = MaterialTheme.typography.titleMedium,
@@ -247,7 +271,7 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
             ) {
                 Icon(Icons.Filled.ExitToApp, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Cerrar sesión")
+                Text(texto(idioma, "Cerrar sesión", "Sign out", "Sair"))
             }
         }
     }
@@ -271,6 +295,30 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
             },
             onCerrar = { dialogoRecordatorio = false }
         )
+    }
+}
+
+@Composable
+private fun BotonApariencia(
+    texto: String,
+    elegido: Boolean,
+    icono: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = if (elegido) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icono, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(texto, style = MaterialTheme.typography.labelMedium)
+        }
     }
 }
 

@@ -1,15 +1,15 @@
 package com.example.tickettrack.view
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory // <-- ESTE IMPORT ES NUEVO
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
@@ -23,11 +23,11 @@ fun MapaGasto(
     onMover: ((Double, Double) -> Unit)? = null
 ) {
 
+    Column(modifier = modifier.fillMaxWidth()) {
     AndroidView(
         factory = { ctx ->
             MapView(ctx).apply {
-                // ESTA LÍNEA ES CLAVE: Fuerza al mapa a conectarse al servidor correcto
-                setTileSource(TileSourceFactory.MAPNIK)
+                setTileSource(MapaBase.fuente)
 
                 setMultiTouchControls(true)
                 controller.setZoom(17.0)
@@ -66,8 +66,14 @@ fun MapaGasto(
                 mapView.invalidate()
             }
         },
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .height(200.dp)
     )
+        Text(
+            text = MapaBase.ATRIBUCION,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }

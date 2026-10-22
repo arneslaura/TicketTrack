@@ -12,8 +12,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -26,10 +29,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -37,9 +42,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cloudinary.android.MediaManager
+import com.example.tickettrack.ui.LocalIdioma
+import com.example.tickettrack.ui.texto
 import com.example.tickettrack.ui.theme.ModoTema
 import com.example.tickettrack.ui.theme.TicketTrackTheme
 import com.example.tickettrack.view.AddGastoScreen
@@ -77,16 +85,19 @@ class MainActivity : ComponentActivity() {
         // --- INICIALIZACIÓN DE OPENSTREETMAP ---
         val prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext)
         org.osmdroid.config.Configuration.getInstance().load(applicationContext, prefs)
-        org.osmdroid.config.Configuration.getInstance().userAgentValue = "TicketTrack_UNAJ_Laura_App_v2"
+        org.osmdroid.config.Configuration.getInstance().userAgentValue =
+            "TicketTrack/1.0 (com.example.tickettrack; Android)"
         // ---------------------------------------
 
         setContent {
             val modoTema by viewModel.modoTema.collectAsStateWithLifecycle()
+            val idioma by viewModel.idioma.collectAsStateWithLifecycle()
             val oscuro = when (modoTema) {
                 ModoTema.SISTEMA -> isSystemInDarkTheme()
                 ModoTema.CLARO -> false
                 ModoTema.OSCURO -> true
             }
+            CompositionLocalProvider(LocalIdioma provides idioma) {
             TicketTrackTheme(darkTheme = oscuro) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -94,6 +105,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     EnrutadorDeSesion(viewModel)
                 }
+            }
             }
         }
     }
@@ -173,12 +185,14 @@ fun EnrutadorDeSesion(viewModel: TicketTrackViewModel) {
         return
     }
 
+    val idioma = LocalIdioma.current
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
             if (pantallaActual == "home") {
                 FloatingActionButton(
                     onClick = { pantallaActual = "add" },
+                    shape = RoundedCornerShape(20.dp),
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
@@ -187,37 +201,63 @@ fun EnrutadorDeSesion(viewModel: TicketTrackViewModel) {
             }
         },
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+            val coloresNav = NavigationBarItemDefaults.colors(
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Surface(
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 8.dp),
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 10.dp
+            ) {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp,
+                windowInsets = WindowInsets(0.dp)
+            ) {
                 NavigationBarItem(
                     selected = pantallaActual == "home",
                     onClick = { pantallaActual = "home" },
+                    colors = coloresNav,
                     icon = { Icon(Icons.Filled.Receipt, contentDescription = null) },
-                    label = { Text("Gastos") }
+                    label = { Text(texto(idioma, "Gastos", "Expenses", "Gastos")) }
                 )
                 NavigationBarItem(
                     selected = pantallaActual == "mapa",
                     onClick = { pantallaActual = "mapa" },
+                    colors = coloresNav,
                     icon = { Icon(Icons.Filled.Map, contentDescription = null) },
-                    label = { Text("Mapa") }
+                    label = { Text(texto(idioma, "Mapa", "Map", "Mapa")) }
                 )
                 NavigationBarItem(
                     selected = pantallaActual == "resumen",
                     onClick = { pantallaActual = "resumen" },
+                    colors = coloresNav,
                     icon = { Icon(Icons.Filled.PieChart, contentDescription = null) },
-                    label = { Text("Resumen") }
+                    label = { Text(texto(idioma, "Resumen", "Summary", "Resumo")) }
                 )
                 NavigationBarItem(
                     selected = pantallaActual == "asistente",
                     onClick = { pantallaActual = "asistente" },
+                    colors = coloresNav,
                     icon = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
                     label = { Text("IA") }
                 )
                 NavigationBarItem(
                     selected = pantallaActual == "perfil",
                     onClick = { pantallaActual = "perfil" },
+                    colors = coloresNav,
                     icon = { Icon(Icons.Filled.Person, contentDescription = null) },
-                    label = { Text("Perfil") }
+                    label = { Text(texto(idioma, "Perfil", "Profile", "Perfil")) }
                 )
+            }
             }
         }
     ) { paddingValues ->
