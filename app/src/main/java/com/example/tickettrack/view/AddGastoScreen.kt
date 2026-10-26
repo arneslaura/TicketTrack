@@ -1,4 +1,3 @@
-
 package com.example.tickettrack.view
 
 import android.Manifest
@@ -32,11 +31,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -58,7 +59,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -70,11 +70,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.tickettrack.R
 import com.example.tickettrack.data.crearArchivoTicket
 import com.example.tickettrack.data.etiquetaDeLugar
 import com.example.tickettrack.data.textoUbicacion
@@ -107,59 +109,41 @@ fun AddGastoScreen(
 
     var amount by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
-    var categoriaNombre by rememberSaveable {
-        mutableStateOf(CategoriaGasto.OTROS.name)
-    }
+    var categoriaNombre by rememberSaveable { mutableStateOf(CategoriaGasto.OTROS.name) }
     var expanded by rememberSaveable { mutableStateOf(false) }
-    var formularioListo by rememberSaveable {
-        mutableStateOf(!editando)
-    }
+    var formularioListo by rememberSaveable { mutableStateOf(!editando) }
 
-    // Fecha del gasto
-    var fechaMillis by rememberSaveable {
-        mutableLongStateOf(System.currentTimeMillis())
-    }
-    var mostrarDatePicker by rememberSaveable {
-        mutableStateOf(false)
-    }
+    var fechaMillis by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
+    var mostrarDatePicker by rememberSaveable { mutableStateOf(false) }
 
-    // Fotografía del comprobante
     var fotoActualUrl by rememberSaveable { mutableStateOf<String?>(null) }
     var fotoNueva by rememberSaveable { mutableStateOf<String?>(null) }
     var fotoCamara by rememberSaveable { mutableStateOf<String?>(null) }
     var avisoFoto by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Ubicación
     var latitud by rememberSaveable { mutableStateOf<Double?>(null) }
     var longitud by rememberSaveable { mutableStateOf<Double?>(null) }
     var lugar by rememberSaveable { mutableStateOf<String?>(null) }
     var buscandoUbicacion by rememberSaveable { mutableStateOf(false) }
     var avisoUbicacion by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Gemini y reconocimiento de voz
     var frase by rememberSaveable { mutableStateOf("") }
     var consultandoIa by rememberSaveable { mutableStateOf(false) }
     var avisoIa by rememberSaveable { mutableStateOf<String?>(null) }
 
-    val fused = remember {
-        LocationServices.getFusedLocationProviderClient(context)
-    }
+    val fused = remember { LocationServices.getFusedLocationProviderClient(context) }
     val scope = rememberCoroutineScope()
 
     fun tomarUbicacionActual() {
         scope.launch {
             buscandoUbicacion = true
             avisoUbicacion = null
-
             try {
-                val actual = fused.getCurrentLocation(
-                    Priority.PRIORITY_HIGH_ACCURACY,
-                    null
-                ).await() ?: fused.lastLocation.await()
+                val actual = fused.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).await()
+                    ?: fused.lastLocation.await()
 
                 if (actual == null) {
-                    avisoUbicacion =
-                        "No se obtuvo una ubicación. Activá el GPS del teléfono o del emulador."
+                    avisoUbicacion = "No se obtuvo una ubicación. Activá el GPS."
                 } else {
                     latitud = actual.latitude
                     longitud = actual.longitude
@@ -168,8 +152,7 @@ fun AddGastoScreen(
             } catch (_: SecurityException) {
                 avisoUbicacion = "Falta el permiso de ubicación."
             } catch (e: Exception) {
-                avisoUbicacion =
-                    e.localizedMessage ?: "No se pudo obtener la ubicación."
+                avisoUbicacion = e.localizedMessage ?: "No se pudo obtener la ubicación."
             } finally {
                 buscandoUbicacion = false
             }
@@ -179,33 +162,20 @@ fun AddGastoScreen(
     val permisoUbicacion = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) {
-            tomarUbicacionActual()
-        } else {
-            avisoUbicacion =
-                "Para guardar el lugar, aceptá el permiso de ubicación."
-        }
+        if (granted) tomarUbicacionActual() else avisoUbicacion = "Aceptá el permiso de ubicación para guardar el lugar."
     }
 
-    val categoriaSeleccionada = CategoriaGasto.entries
-        .find { it.name == categoriaNombre }
-        ?: CategoriaGasto.OTROS
-
+    val categoriaSeleccionada = CategoriaGasto.entries.find { it.name == categoriaNombre } ?: CategoriaGasto.OTROS
     val vistaPrevia = fotoNueva ?: fotoActualUrl
 
-    // Cámara
-    val camara = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicture()
-    ) { ok ->
+    val camara = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
         if (ok) {
             fotoNueva = fotoCamara
             avisoFoto = null
         }
     }
 
-    val permisoCamara = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
+    val permisoCamara = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
             val uri = crearArchivoTicket(context)
             fotoCamara = uri.toString()
@@ -215,14 +185,8 @@ fun AddGastoScreen(
         }
     }
 
-    // Reconocimiento de voz
-    val voz = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { resultado ->
-        val textos = resultado.data?.getStringArrayListExtra(
-            RecognizerIntent.EXTRA_RESULTS
-        )
-
+    val voz = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { resultado ->
+        val textos = resultado.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
         if (!textos.isNullOrEmpty()) {
             frase = textos.first()
             avisoIa = null
@@ -230,82 +194,42 @@ fun AddGastoScreen(
     }
 
     fun iniciarDictado() {
-        val intent = Intent(
-            RecognizerIntent.ACTION_RECOGNIZE_SPEECH
-        ).apply {
-            putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
-            )
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-AR")
-            putExtra(
-                RecognizerIntent.EXTRA_PROMPT,
-                "Contá el gasto"
-            )
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Contá el gasto")
         }
-
         try {
             voz.launch(intent)
         } catch (_: ActivityNotFoundException) {
-            avisoIa =
-                "Este dispositivo no reconoce la voz. Escribí el gasto."
+            avisoIa = "Este dispositivo no reconoce la voz. Escribí el gasto."
         }
     }
 
-    val permisoMicrofono = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            iniciarDictado()
-        } else {
-            avisoIa =
-                "Para dictar el gasto, aceptá el permiso del micrófono."
-        }
+    val permisoMicrofono = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) iniciarDictado() else avisoIa = "Para dictar, aceptá el permiso del micrófono."
     }
 
-    // Aplicar la sugerencia generada por Gemini
     fun aplicarSugerencia(sugerencia: SugerenciaGasto) {
-        sugerencia.amount?.let {
-            amount = montoParaEditar(it)
-        }
-
-        sugerencia.category?.let {
-            categoriaNombre = it.name
-        }
-
-        if (sugerencia.description.isNotBlank()) {
-            description = sugerencia.description
-        }
-
-        if (!sugerencia.placeLabel.isNullOrBlank()) {
-            lugar = sugerencia.placeLabel
-        }
-
+        sugerencia.amount?.let { amount = montoParaEditar(it) }
+        sugerencia.category?.let { categoriaNombre = it.name }
+        if (sugerencia.description.isNotBlank()) description = sugerencia.description
+        if (!sugerencia.placeLabel.isNullOrBlank()) lugar = sugerencia.placeLabel
         avisoIa = "Revisá los datos antes de guardar."
     }
 
-    // Galería
-    val galeria = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
+    val galeria = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
             fotoNueva = uri.toString()
             avisoFoto = null
         }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.limpiarErrorGasto()
-    }
+    LaunchedEffect(Unit) { viewModel.limpiarErrorGasto() }
 
-    // Cargar los datos existentes al editar un gasto
     LaunchedEffect(gastoId, gastos) {
-        if (formularioListo || gastoId == null) {
-            return@LaunchedEffect
-        }
-
-        val gasto = gastos.find { it.id == gastoId }
-            ?: return@LaunchedEffect
+        if (formularioListo || gastoId == null) return@LaunchedEffect
+        val gasto = gastos.find { it.id == gastoId } ?: return@LaunchedEffect
 
         amount = montoParaEditar(gasto.amount)
         description = gasto.description
@@ -315,14 +239,10 @@ fun AddGastoScreen(
         longitud = gasto.longitude
         lugar = gasto.placeLabel
         fechaMillis = gasto.createdAt.time
-
         formularioListo = true
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -330,11 +250,7 @@ fun AddGastoScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp)
         ) {
-
-            TextButton(
-                onClick = onVolver,
-                enabled = !guardando
-            ) {
+            TextButton(onClick = onVolver, enabled = !guardando) {
                 Text(
                     text = "← Volver",
                     style = MaterialTheme.typography.titleMedium,
@@ -345,70 +261,42 @@ fun AddGastoScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = if (editando) "Editar gasto" else "Nuevo gasto",
+                text = if (editando) stringResource(R.string.title_edit_expense) else stringResource(R.string.title_new_expense),
                 style = MaterialTheme.typography.headlineMedium
-            )
-            Text(
-                text = "Completalo a mano o contalo en una frase.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             if (editando && !formularioListo) {
                 Spacer(modifier = Modifier.height(24.dp))
-                Text("Cargando gasto...")
+                Text(stringResource(R.string.loading_expense))
                 return@Column
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Selector de fecha
             val fechaFormateada = remember(fechaMillis) {
-                SimpleDateFormat(
-                    "dd/MM/yyyy",
-                    Locale.getDefault()
-                ).format(Date(fechaMillis))
+                SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(fechaMillis))
             }
 
             if (mostrarDatePicker) {
-                val datePickerState = rememberDatePickerState(
-                    initialSelectedDateMillis = fechaMillis
-                )
-
+                val datePickerState = rememberDatePickerState(initialSelectedDateMillis = fechaMillis)
                 DatePickerDialog(
-                    onDismissRequest = {
-                        mostrarDatePicker = false
-                    },
+                    onDismissRequest = { mostrarDatePicker = false },
                     confirmButton = {
-                        TextButton(
-                            onClick = {
-                                datePickerState.selectedDateMillis?.let {
-                                    fechaMillis = it
-                                }
-                                mostrarDatePicker = false
-                            }
-                        ) {
-                            Text("Aceptar")
-                        }
+                        TextButton(onClick = {
+                            datePickerState.selectedDateMillis?.let { fechaMillis = it }
+                            mostrarDatePicker = false
+                        }) { Text("Aceptar") }
                     },
                     dismissButton = {
-                        TextButton(
-                            onClick = {
-                                mostrarDatePicker = false
-                            }
-                        ) {
-                            Text("Cancelar")
-                        }
+                        TextButton(onClick = { mostrarDatePicker = false }) { Text("Cancelar") }
                     }
                 ) {
                     DatePicker(state = datePickerState)
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
             SeccionFormulario(
-                titulo = "Con una frase",
+                titulo = stringResource(R.string.section_ai_assistant),
                 color = MaterialTheme.colorScheme.primaryContainer
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -419,7 +307,7 @@ fun AddGastoScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "La IA completa monto, categoría y nota.",
+                        text = stringResource(R.string.ai_assistant_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -428,7 +316,7 @@ fun AddGastoScreen(
                 TextField(
                     value = frase,
                     onValueChange = { frase = it },
-                    placeholder = { Text("Gasté 4500 en el súper") },
+                    placeholder = { Text(stringResource(R.string.ai_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !guardando && !consultandoIa,
                     colors = coloresCampo(),
@@ -441,22 +329,15 @@ fun AddGastoScreen(
                 ) {
                     FilledTonalButton(
                         onClick = {
-                            val permitido = ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.RECORD_AUDIO
-                            ) == PackageManager.PERMISSION_GRANTED
-                            if (permitido) {
-                                iniciarDictado()
-                            } else {
-                                permisoMicrofono.launch(Manifest.permission.RECORD_AUDIO)
-                            }
+                            val permitido = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                            if (permitido) iniciarDictado() else permisoMicrofono.launch(Manifest.permission.RECORD_AUDIO)
                         },
                         enabled = !guardando && !consultandoIa,
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Filled.Mic, contentDescription = null)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Dictar")
+                        Text(stringResource(R.string.btn_dictate))
                     }
                     Button(
                         onClick = {
@@ -466,36 +347,27 @@ fun AddGastoScreen(
                             avisoIa = null
                             viewModel.interpretarFrase(
                                 frase = texto,
-                                onListo = { sugerencia ->
-                                    aplicarSugerencia(sugerencia)
-                                    consultandoIa = false
-                                },
-                                onError = { mensaje ->
-                                    avisoIa = mensaje
-                                    consultandoIa = false
-                                }
+                                onListo = { sugerencia -> aplicarSugerencia(sugerencia); consultandoIa = false },
+                                onError = { mensaje -> avisoIa = mensaje; consultandoIa = false }
                             )
                         },
                         enabled = frase.isNotBlank() && !guardando && !consultandoIa,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(if (consultandoIa) "Pensando..." else "Armar")
+                        Text(if (consultandoIa) stringResource(R.string.btn_thinking) else stringResource(R.string.btn_build))
                     }
                 }
                 if (avisoIa != null) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = avisoIa.orEmpty(),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                    Text(text = avisoIa.orEmpty(), color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            SeccionFormulario(titulo = "Datos del gasto") {
+            SeccionFormulario(titulo = stringResource(R.string.section_expense_data)) {
                 Text(
-                    text = "Monto",
+                    text = stringResource(R.string.label_amount),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -552,12 +424,12 @@ fun AddGastoScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Categoría",
+                                text = stringResource(R.string.label_category),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = categoriaSeleccionada.descripcion,
+                                text = categoriaSeleccionada.traducida(),
                                 style = MaterialTheme.typography.titleMedium
                             )
                         }
@@ -569,7 +441,7 @@ fun AddGastoScreen(
                     ) {
                         CategoriaGasto.entries.forEach { categoria ->
                             DropdownMenuItem(
-                                text = { Text(categoria.descripcion) },
+                                text = { Text(categoria.traducida()) },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = iconoCategoria(categoria),
@@ -586,21 +458,21 @@ fun AddGastoScreen(
                     }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
                 TextField(
                     value = description,
                     onValueChange = { description = it },
-                    placeholder = { Text("Nota, opcional") },
+                    placeholder = { Text(stringResource(R.string.label_note)) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !guardando,
                     colors = coloresCampo()
                 )
+
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(enabled = !guardando) {
-                            mostrarDatePicker = true
-                        }
+                        .clickable(enabled = !guardando) { mostrarDatePicker = true }
                         .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -612,7 +484,7 @@ fun AddGastoScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Fecha",
+                            text = stringResource(R.string.label_date),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -626,7 +498,7 @@ fun AddGastoScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            SeccionFormulario(titulo = "Comprobante") {
+            SeccionFormulario(titulo = stringResource(R.string.section_receipt)) {
                 if (vistaPrevia != null) {
                     AsyncImage(
                         model = vistaPrevia,
@@ -645,10 +517,7 @@ fun AddGastoScreen(
                 ) {
                     FilledTonalButton(
                         onClick = {
-                            val permitido = ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.CAMERA
-                            ) == PackageManager.PERMISSION_GRANTED
+                            val permitido = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
                             if (permitido) {
                                 val uri = crearArchivoTicket(context)
                                 fotoCamara = uri.toString()
@@ -662,22 +531,16 @@ fun AddGastoScreen(
                     ) {
                         Icon(Icons.Filled.PhotoCamera, contentDescription = null)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Cámara")
+                        Text(stringResource(R.string.btn_camera))
                     }
                     FilledTonalButton(
-                        onClick = {
-                            galeria.launch(
-                                PickVisualMediaRequest(
-                                    ActivityResultContracts.PickVisualMedia.ImageOnly
-                                )
-                            )
-                        },
+                        onClick = { galeria.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                         enabled = !guardando,
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Filled.PhotoLibrary, contentDescription = null)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Galería")
+                        Text(stringResource(R.string.btn_gallery))
                     }
                 }
                 if (fotoNueva != null) {
@@ -689,14 +552,8 @@ fun AddGastoScreen(
                             avisoIa = null
                             viewModel.leerTicket(
                                 uri = uri,
-                                onListo = { sugerencia ->
-                                    aplicarSugerencia(sugerencia)
-                                    consultandoIa = false
-                                },
-                                onError = { mensaje ->
-                                    avisoIa = mensaje
-                                    consultandoIa = false
-                                }
+                                onListo = { sugerencia -> aplicarSugerencia(sugerencia); consultandoIa = false },
+                                onError = { mensaje -> avisoIa = mensaje; consultandoIa = false }
                             )
                         },
                         enabled = !guardando && !consultandoIa,
@@ -704,15 +561,12 @@ fun AddGastoScreen(
                     ) {
                         Icon(Icons.Filled.AutoAwesome, contentDescription = null)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (consultandoIa) "Leyendo ticket..." else "Completar con la foto")
+                        Text(if (consultandoIa) stringResource(R.string.loading_reading_ticket) else stringResource(R.string.btn_complete_photo))
                     }
                 }
                 if (avisoFoto != null) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = avisoFoto.orEmpty(),
-                        color = MaterialTheme.colorScheme.error
-                    )
+                    Text(text = avisoFoto.orEmpty(), color = MaterialTheme.colorScheme.error)
                 }
             }
 
@@ -720,77 +574,91 @@ fun AddGastoScreen(
 
             val textoLugar = textoUbicacion(lugar, latitud, longitud)
 
-            SeccionFormulario(titulo = "Lugar") {
-                Text(
-                    text = textoLugar ?: "Todavía sin ubicación",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                FilledTonalButton(
-                    onClick = {
-                        val permitido = ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.ACCESS_FINE_LOCATION
-                        ) == PackageManager.PERMISSION_GRANTED
-                        if (permitido) {
-                            tomarUbicacionActual()
-                        } else {
-                            permisoUbicacion.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                        }
-                    },
-                    enabled = !guardando && !buscandoUbicacion,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.MyLocation, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(if (buscandoUbicacion) "Buscando..." else "Usar mi ubicación")
+            SeccionFormulario(titulo = stringResource(R.string.section_place)) {
+                if (textoLugar != null) {
+                    Text(
+                        text = textoLugar,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
 
-            if (latitud != null && longitud != null) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilledTonalButton(
+                        onClick = {
+                            val permitido = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                            if (permitido) tomarUbicacionActual() else permisoUbicacion.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                        },
+                        enabled = !guardando && !buscandoUbicacion,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.MyLocation, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(if (buscandoUbicacion) "Buscando..." else stringResource(R.string.btn_use_location))
+                    }
 
-                MapaGasto(
-                    latitud = latitud!!,
-                    longitud = longitud!!,
-                    onMover = { nuevaLat, nuevaLon ->
-                        latitud = nuevaLat
-                        longitud = nuevaLon
-
-                        scope.launch {
-                            etiquetaDeLugar(nuevaLat, nuevaLon)?.let {
-                                lugar = it
-                            }
+                    if (latitud != null && longitud != null) {
+                        FilledTonalButton(
+                            onClick = {
+                                latitud = null
+                                longitud = null
+                                lugar = null
+                            },
+                            enabled = !guardando,
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        ) {
+                            Icon(Icons.Filled.Delete, contentDescription = "Borrar ubicación")
                         }
                     }
-                )
+                }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "Tocá el mapa para ajustar el punto",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
+                if (latitud != null && longitud != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                    ) {
+                        MapaGasto(
+                            latitud = latitud!!,
+                            longitud = longitud!!,
+                            onMover = { nuevaLat, nuevaLon ->
+                                latitud = nuevaLat
+                                longitud = nuevaLon
+                                scope.launch {
+                                    etiquetaDeLugar(nuevaLat, nuevaLon)?.let { lugar = it }
+                                }
+                            }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.map_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 if (avisoUbicacion != null) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = avisoUbicacion.orEmpty(),
-                        color = MaterialTheme.colorScheme.error
-                    )
+                    Text(text = avisoUbicacion.orEmpty(), color = MaterialTheme.colorScheme.error)
                 }
             }
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Guardar o actualizar el gasto
             val montoDouble = montoDesdeTexto(amount)
 
             Button(
                 onClick = {
-                    if (montoDouble <= 0.0 || guardando) {
-                        return@Button
-                    }
+                    if (montoDouble <= 0.0 || guardando) return@Button
 
                     val foto = fotoNueva?.let(Uri::parse)
                     val fechaSeleccionada = Date(fechaMillis)
@@ -829,19 +697,16 @@ fun AddGastoScreen(
             ) {
                 Text(
                     when {
-                        guardando -> "Guardando..."
-                        editando -> "Guardar cambios"
-                        else -> "Guardar gasto"
+                        guardando -> stringResource(R.string.btn_saving)
+                        editando -> stringResource(R.string.btn_save_changes)
+                        else -> stringResource(R.string.btn_save_expense)
                     }
                 )
             }
 
             if (errorGasto != null) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = errorGasto.orEmpty(),
-                    color = MaterialTheme.colorScheme.error
-                )
+                Text(text = errorGasto.orEmpty(), color = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -879,20 +744,12 @@ private fun coloresCampo() = TextFieldDefaults.colors(
 )
 
 private fun montoDesdeTexto(texto: String): Double {
-    val limpio = texto.trim()
-        .replace(".", "")
-        .replace(",", ".")
-
+    val limpio = texto.trim().replace(".", "").replace(",", ".")
     return limpio.toDoubleOrNull() ?: 0.0
 }
 
 private fun montoParaEditar(amount: Double): String {
     val entero = amount.toLong()
     val centavos = ((amount - entero) * 100).roundToInt()
-
-    return if (centavos == 0) {
-        entero.toString()
-    } else {
-        "%d,%02d".format(entero, centavos)
-    }
+    return if (centavos == 0) entero.toString() else "%d,%02d".format(entero, centavos)
 }

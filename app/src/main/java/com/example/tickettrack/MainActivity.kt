@@ -1,6 +1,5 @@
 package com.example.tickettrack
 
-
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -42,12 +41,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cloudinary.android.MediaManager
 import com.example.tickettrack.ui.LocalIdioma
-import com.example.tickettrack.ui.texto
 import com.example.tickettrack.ui.theme.ModoTema
 import com.example.tickettrack.ui.theme.TicketTrackTheme
 import com.example.tickettrack.view.AddGastoScreen
@@ -79,7 +78,7 @@ class MainActivity : ComponentActivity() {
             )
             MediaManager.init(this, config)
         } catch (e: Exception) {
-            // Si ya se inicializó (ej: al girar la pantalla), lo ignoramos silenciosamente
+            // Ignorar silenciosamente
         }
 
         // --- INICIALIZACIÓN DE OPENSTREETMAP ---
@@ -90,22 +89,32 @@ class MainActivity : ComponentActivity() {
         // ---------------------------------------
 
         setContent {
+            val contextoBase = LocalContext.current
             val modoTema by viewModel.modoTema.collectAsStateWithLifecycle()
             val idioma by viewModel.idioma.collectAsStateWithLifecycle()
+
+            // Actualizamos el idioma directamente en los recursos sin perder la Actividad
+            val configuracion = android.content.res.Configuration(contextoBase.resources.configuration)
+            configuracion.setLocale(idioma.locale)
+            @Suppress("DEPRECATION")
+            contextoBase.resources.updateConfiguration(configuracion, contextoBase.resources.displayMetrics)
+
             val oscuro = when (modoTema) {
                 ModoTema.SISTEMA -> isSystemInDarkTheme()
                 ModoTema.CLARO -> false
                 ModoTema.OSCURO -> true
             }
+
+            // Ya no sobreescribimos LocalContext
             CompositionLocalProvider(LocalIdioma provides idioma) {
-            TicketTrackTheme(darkTheme = oscuro) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    EnrutadorDeSesion(viewModel)
+                TicketTrackTheme(darkTheme = oscuro) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        EnrutadorDeSesion(viewModel)
+                    }
                 }
-            }
             }
         }
     }
@@ -185,7 +194,6 @@ fun EnrutadorDeSesion(viewModel: TicketTrackViewModel) {
         return
     }
 
-    val idioma = LocalIdioma.current
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
@@ -196,7 +204,7 @@ fun EnrutadorDeSesion(viewModel: TicketTrackViewModel) {
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Nuevo gasto")
+                    Icon(Icons.Filled.Add, contentDescription = null)
                 }
             }
         },
@@ -217,47 +225,47 @@ fun EnrutadorDeSesion(viewModel: TicketTrackViewModel) {
                 color = MaterialTheme.colorScheme.surface,
                 shadowElevation = 10.dp
             ) {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 0.dp,
-                windowInsets = WindowInsets(0.dp)
-            ) {
-                NavigationBarItem(
-                    selected = pantallaActual == "home",
-                    onClick = { pantallaActual = "home" },
-                    colors = coloresNav,
-                    icon = { Icon(Icons.Filled.Receipt, contentDescription = null) },
-                    label = { Text(texto(idioma, "Gastos", "Expenses", "Gastos")) }
-                )
-                NavigationBarItem(
-                    selected = pantallaActual == "mapa",
-                    onClick = { pantallaActual = "mapa" },
-                    colors = coloresNav,
-                    icon = { Icon(Icons.Filled.Map, contentDescription = null) },
-                    label = { Text(texto(idioma, "Mapa", "Map", "Mapa")) }
-                )
-                NavigationBarItem(
-                    selected = pantallaActual == "resumen",
-                    onClick = { pantallaActual = "resumen" },
-                    colors = coloresNav,
-                    icon = { Icon(Icons.Filled.PieChart, contentDescription = null) },
-                    label = { Text(texto(idioma, "Resumen", "Summary", "Resumo")) }
-                )
-                NavigationBarItem(
-                    selected = pantallaActual == "asistente",
-                    onClick = { pantallaActual = "asistente" },
-                    colors = coloresNav,
-                    icon = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
-                    label = { Text("IA") }
-                )
-                NavigationBarItem(
-                    selected = pantallaActual == "perfil",
-                    onClick = { pantallaActual = "perfil" },
-                    colors = coloresNav,
-                    icon = { Icon(Icons.Filled.Person, contentDescription = null) },
-                    label = { Text(texto(idioma, "Perfil", "Profile", "Perfil")) }
-                )
-            }
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 0.dp,
+                    windowInsets = WindowInsets(0.dp)
+                ) {
+                    NavigationBarItem(
+                        selected = pantallaActual == "home",
+                        onClick = { pantallaActual = "home" },
+                        colors = coloresNav,
+                        icon = { Icon(Icons.Filled.Receipt, contentDescription = null) },
+                        label = { Text(stringResource(R.string.nav_expenses)) }
+                    )
+                    NavigationBarItem(
+                        selected = pantallaActual == "mapa",
+                        onClick = { pantallaActual = "mapa" },
+                        colors = coloresNav,
+                        icon = { Icon(Icons.Filled.Map, contentDescription = null) },
+                        label = { Text(stringResource(R.string.nav_map)) }
+                    )
+                    NavigationBarItem(
+                        selected = pantallaActual == "resumen",
+                        onClick = { pantallaActual = "resumen" },
+                        colors = coloresNav,
+                        icon = { Icon(Icons.Filled.PieChart, contentDescription = null) },
+                        label = { Text(stringResource(R.string.nav_summary)) }
+                    )
+                    NavigationBarItem(
+                        selected = pantallaActual == "asistente",
+                        onClick = { pantallaActual = "asistente" },
+                        colors = coloresNav,
+                        icon = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
+                        label = { Text(stringResource(R.string.nav_ai)) }
+                    )
+                    NavigationBarItem(
+                        selected = pantallaActual == "perfil",
+                        onClick = { pantallaActual = "perfil" },
+                        colors = coloresNav,
+                        icon = { Icon(Icons.Filled.Person, contentDescription = null) },
+                        label = { Text(stringResource(R.string.nav_profile)) }
+                    )
+                }
             }
         }
     ) { paddingValues ->

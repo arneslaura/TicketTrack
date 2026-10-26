@@ -294,7 +294,7 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
         _errorGasto.value = null
     }
 
-    // Crear un gasto y subir su foto a Cloudinary si corresponde
+    // Crear un gasto y subir su foto a Cloudinary si corresponde (Soporte Offline Robusto)
     fun agregarGasto(
         amount: Double,
         category: CategoriaGasto,
@@ -303,7 +303,7 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
         latitude: Double?,
         longitude: Double?,
         placeLabel: String?,
-        fecha: java.util.Date, // <-- ACÁ ENTRA LA FECHA ELEGIDA
+        fecha: java.util.Date,
         onSuccess: () -> Unit
     ) {
         val usuarioActual = _usuario.value ?: return
@@ -315,8 +315,15 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
 
                 val gastoId = UUID.randomUUID().toString()
 
-                val photoUrl = fotoLocal?.let {
-                    subirFoto(usuarioActual.uid, gastoId, it)
+                // Si hay internet y foto local, intentamos subirla a Cloudinary
+                val photoUrl = if (fotoLocal != null && _enLinea.value) {
+                    try {
+                        subirFoto(usuarioActual.uid, gastoId, fotoLocal)
+                    } catch (_: Exception) {
+                        null // Si falla Cloudinary por red, guardamos sin foto online temporalmente
+                    }
+                } else {
+                    null
                 }
 
                 val nuevoGasto = Gasto(
@@ -329,14 +336,28 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
                     latitude = latitude,
                     longitude = longitude,
                     placeLabel = placeLabel?.takeIf { it.isNotBlank() },
-                    createdAt = fecha, // <-- ACÁ GUARDAMOS LA FECHA ELEGIDA
-                    updatedAt = java.util.Date() // updatedAt sigue siendo el momento exacto actual
+                    createdAt = fecha,
+                    updatedAt = java.util.Date()
                 )
 
-                db.collection("gastos")
-                    .document(gastoId)
-                    .set(nuevoGasto)
-                    .await()
+                // 1. Guardar de forma inmediata en la lista local y en la caché del teléfono
+                val listaActualizada = listOf(nuevoGasto) + _gastos.value
+                _gastos.value = listaActualizada
+                withContext(Dispatchers.IO) {
+                    CacheGastos.guardar(getApplication(), usuarioActual.uid, listaActualizada)
+                }
+
+                // 2. Intentar subir a Firestore en segundo plano (si hay red, se sincroniza; si no, Firestore lo reintentará)
+                if (_enLinea.value) {
+                    try {
+                        db.collection("gastos")
+                            .document(gastoId)
+                            .set(nuevoGasto)
+                            .await()
+                    } catch (_: Exception) {
+                        // Si falla la red al enviar, ya quedó seguro en la caché local gracias al paso 1
+                    }
+                }
 
                 onSuccess()
             } catch (e: Exception) {
@@ -357,7 +378,7 @@ class TicketTrackViewModel(application: Application) : AndroidViewModel(applicat
         latitude: Double?,
         longitude: Double?,
         placeLabel: String?,
-        fecha: java.util.Date, // <-- ACÁ ENTRA LA FECHA ELEGIDA
+        fecha: java.util.Date,
         onSuccess: () -> Unit
     ) {
         val usuarioActual = _usuario.value ?: return

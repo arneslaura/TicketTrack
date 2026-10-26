@@ -26,13 +26,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.tickettrack.R
 import com.example.tickettrack.ui.Idioma
-import com.example.tickettrack.ui.texto
 import com.example.tickettrack.ui.theme.ModoTema
 import com.example.tickettrack.viewmodel.TicketTrackViewModel
 
@@ -48,6 +49,7 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
     var dialogoRecordatorio by rememberSaveable { mutableStateOf(false) }
     var avisoNotificacion by rememberSaveable { mutableStateOf<String?>(null) }
     var probarAlPermitir by remember { mutableStateOf(false) }
+    val errorNotificaciones = stringResource(R.string.error_notifications_off)
 
     val permisoNotificacion = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -56,7 +58,7 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
             avisoNotificacion = null
             if (probarAlPermitir) viewModel.probarRecordatorio()
         } else {
-            avisoNotificacion = "Activá las notificaciones para usar el recordatorio."
+            avisoNotificacion = errorNotificaciones
             viewModel.cambiarHoraRecordatorio(horaRecordatorio.hora, horaRecordatorio.minuto, false)
         }
         probarAlPermitir = false
@@ -68,21 +70,18 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
                 PackageManager.PERMISSION_GRANTED
     }
 
-    // Dividimos la pantalla en una columna principal
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        // PARTE SUPERIOR (Scrolleable)
         Column(
             modifier = Modifier
-                .weight(1f) // Esto empuja al botón de abajo hacia el fondo
+                .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 1. TARJETA DE USUARIO
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
@@ -106,7 +105,7 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
                     } else {
                         Icon(
                             imageVector = Icons.Filled.AccountCircle,
-                            contentDescription = "Perfil genérico",
+                            contentDescription = stringResource(R.string.generic_profile),
                             modifier = Modifier.size(80.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
@@ -119,11 +118,13 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
                         Text(
                             text = nombre,
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            // Corrección de contraste crítico para el modo claro
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                     Text(
-                        text = usuario?.email ?: "Sesión iniciada",
+                        text = usuario?.email ?: "",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -132,10 +133,9 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // 2. SECCIÓN CONFIGURACIÓN
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Configuración",
+                    text = stringResource(R.string.profile_settings),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
@@ -148,29 +148,28 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
 
-                        // APARIENCIA
-                        Text(text = texto(idioma, "Apariencia", "Appearance", "Aparência"), style = MaterialTheme.typography.titleMedium)
+                        Text(text = stringResource(R.string.profile_appearance), style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             BotonApariencia(
-                                texto = texto(idioma, "Sistema", "System", "Sistema"),
+                                texto = stringResource(R.string.theme_system),
                                 elegido = modoTema == ModoTema.SISTEMA,
                                 icono = Icons.Filled.PhoneAndroid,
                                 onClick = { viewModel.cambiarModoTema(ModoTema.SISTEMA) },
                                 modifier = Modifier.weight(1f)
                             )
                             BotonApariencia(
-                                texto = texto(idioma, "Día", "Day", "Dia"),
+                                texto = stringResource(R.string.theme_day),
                                 elegido = modoTema == ModoTema.CLARO,
                                 icono = Icons.Filled.WbSunny,
                                 onClick = { viewModel.cambiarModoTema(ModoTema.CLARO) },
                                 modifier = Modifier.weight(1f)
                             )
                             BotonApariencia(
-                                texto = texto(idioma, "Noche", "Night", "Noite"),
+                                texto = stringResource(R.string.theme_night),
                                 elegido = modoTema == ModoTema.OSCURO,
                                 icono = Icons.Filled.DarkMode,
                                 onClick = { viewModel.cambiarModoTema(ModoTema.OSCURO) },
@@ -179,7 +178,7 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
                         }
 
                         Spacer(modifier = Modifier.height(20.dp))
-                        Text(text = texto(idioma, "Idioma", "Language", "Idioma"), style = MaterialTheme.typography.titleMedium)
+                        Text(text = stringResource(R.string.profile_language), style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -203,7 +202,6 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
                         HorizontalDivider()
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // RECORDATORIO
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()
@@ -211,8 +209,8 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
                             Icon(Icons.Filled.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(texto(idioma, "Recordatorio diario", "Daily reminder", "Lembrete diário"), style = MaterialTheme.typography.titleMedium)
-                                Text(texto(idioma, "Avisar para cargar gastos", "Remind me to add expenses", "Avisar para registrar gastos"), style = MaterialTheme.typography.bodySmall)
+                                Text(stringResource(R.string.reminder_title), style = MaterialTheme.typography.titleMedium)
+                                Text(stringResource(R.string.reminder_desc), style = MaterialTheme.typography.bodySmall)
                             }
                             Switch(
                                 checked = horaRecordatorio.activo,
@@ -226,7 +224,6 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
                             )
                         }
 
-                        // Si está encendido, mostramos a qué hora
                         if (horaRecordatorio.activo) {
                             Spacer(modifier = Modifier.height(12.dp))
                             Row(
@@ -238,7 +235,7 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(texto(idioma, "Hora del aviso", "Reminder time", "Hora do aviso"), style = MaterialTheme.typography.bodyLarge)
+                                Text(stringResource(R.string.reminder_time), style = MaterialTheme.typography.bodyLarge)
                                 Text(
                                     text = horaRecordatorio.texto(),
                                     style = MaterialTheme.typography.titleMedium,
@@ -255,7 +252,6 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
             }
         }
 
-        // PARTE INFERIOR (Fija al fondo)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -271,7 +267,7 @@ fun PerfilScreen(viewModel: TicketTrackViewModel) {
             ) {
                 Icon(Icons.Filled.ExitToApp, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(texto(idioma, "Cerrar sesión", "Sign out", "Sair"))
+                Text(stringResource(R.string.btn_signout))
             }
         }
     }
@@ -339,21 +335,21 @@ private fun DialogoRecordatorio(
 
     AlertDialog(
         onDismissRequest = onCerrar,
-        title = { Text("Hora del aviso") },
+        title = { Text(stringResource(R.string.dialog_reminder_title)) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 TimeInput(state = estado)
                 Spacer(modifier = Modifier.height(16.dp))
-                TextButton(onClick = onProbar) { Text("Hacer prueba de sonido") }
+                TextButton(onClick = onProbar) { Text(stringResource(R.string.btn_test_sound)) }
             }
         },
         confirmButton = {
             Button(onClick = { onGuardar(estado.hour, estado.minute) }) {
-                Text("Guardar")
+                Text(stringResource(R.string.btn_save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onCerrar) { Text("Cancelar") }
+            TextButton(onClick = onCerrar) { Text(stringResource(R.string.btn_cancel)) }
         }
     )
 }

@@ -1,3 +1,128 @@
 <resources>
+    <!-- Log in -->
     <string name="app_name">TicketTrack</string>
+    <string name="slogan">Tus gastos en un solo lugar</string>
+    <string name="login_title">Ingresar</string>
+    <string name="email_label">Email</string>
+    <string name="password_label">Contraseña</string>
+    <string name="password_min">Mínimo 6 caracteres</string>
+    <string name="repeat_password_label">Repetir contraseña</string>
+    <string name="create_account_title">Crear cuenta</string>
+    <string name="btn_login">Ingresar</string>
+    <string name="btn_create_account">Crear cuenta</string>
+    <string name="btn_continue_google">Continuar con Google</string>
+    <string name="link_create_account">Crear cuenta nueva</string>
+    <string name="link_have_account">Ya tengo cuenta, ingresar</string>
+
+    <!-- Errores -->
+    <string name="error_google_no_token">Google no devolvió un token. Revisá el ID de cliente web.</string>
+    <string name="error_google_fail">No se pudo ingresar con Google. Probá de nuevo.</string>
+    <string name="error_google_setup">Falta activar Google en Firebase y pegar GOOGLE_WEB_CLIENT_ID en local.properties.</string>
+    <string name="error_empty_login">Completá el email y la contraseña.</string>
+    <string name="error_empty_register">Completá el email y las dos contraseñas.</string>
+    <string name="error_invalid_email">El email no es válido.</string>
+    <string name="error_short_password">La contraseña tiene que tener al menos 6 caracteres.</string>
+    <string name="error_password_mismatch">Las contraseñas no coinciden.</string>
+
+    <!-- Perfil -->
+    <string name="profile_settings">Configuración</string>
+    <string name="profile_appearance">Apariencia</string>
+    <string name="theme_system">Sistema</string>
+    <string name="theme_day">Día</string>
+    <string name="theme_night">Noche</string>
+    <string name="profile_language">Idioma</string>
+    <string name="reminder_title">Recordatorio diario</string>
+    <string name="reminder_desc">Avisar para cargar gastos</string>
+    <string name="reminder_time">Hora del aviso</string>
+    <string name="btn_signout">Cerrar sesión</string>
+
+    <!-- Dialogo Recordatorio -->
+    <string name="dialog_reminder_title">Hora del aviso</string>
+    <string name="btn_test_sound">Hacer prueba de sonido</string>
+    <string name="btn_save">Guardar</string>
+    <string name="btn_cancel">Cancelar</string>
+    <string name="error_notifications_off">Activá las notificaciones para usar el recordatorio.</string>
+    <string name="generic_profile">Perfil genérico</string>
+
+    <string name="nav_expenses">Gastos</string>
+    <string name="nav_map">Mapa</string>
+    <string name="nav_summary">Resumen</string>
+    <string name="nav_ai">Asistente</string>
+    <string name="nav_profile">Perfil</string>
+
+    <!-- AddGastoScreen -->
+    <string name="title_new_expense">Nuevo gasto</string>
+    <string name="title_edit_expense">Editar gasto</string>
+    <string name="loading_expense">Cargando gasto...</string>
+    <string name="section_ai_assistant">Asistente rápido</string>
+    <string name="ai_assistant_desc">Ahorrá tiempo dictando qué compraste.</string>
+    <string name="ai_placeholder">Contá tu gasto acá...</string>
+    <string name="btn_dictate">Dictar</string>
+    <string name="btn_build">Armar</string>
+    <string name="btn_thinking">Pensando...</string>
+    <string name="section_expense_data">Datos del gasto</string>
+    <string name="label_amount">Monto</string>
+    <string name="label_category">Categoría</string>
+    <string name="label_note">Nota (opcional)</string>
+    <string name="label_date">Fecha</string>
+    <string name="section_receipt">Comprobante</string>
+    <string name="btn_camera">Cámara</string>
+    <string name="btn_gallery">Galería</string>
+    <string name="btn_complete_photo">Completar con la foto</string>
+    <string name="loading_reading_ticket">Leyendo ticket...</string>
+    <string name="section_place">Lugar</string>
+    <string name="btn_use_location">Usar mi ubicación</string>
+    <string name="map_hint">Deslizá el mapa para ajustar el punto exacto.</string>
+    <string name="btn_save_expense">Guardar gasto</string>
+    <string name="btn_save_changes">Guardar cambios</string>
+    <string name="btn_saving">Guardando...</string>
+
+    <!-- Categorías de Gastos -->
+    <string name="cat_supermarket">Supermercado</string>
+    <string name="cat_transport">Transporte</string>
+    <string name="cat_services">Servicios</string>
+    <string name="cat_leisure">Ocio</string>
+    <string name="cat_health">Salud</string>
+    <string name="cat_others">Otros</string>
+
+    <!-- Home -->
+    <string name="title_my_expenses">Mis gastos</string>
+    <string name="offline_warning">Sin conexión</string>
+    <string name="filter_all">Todos</string>
+    <string name="filter_week">Esta semana</string>
+    <string name="filter_month">Este mes</string>
+    <string name="category_all">Todas</string>
+    <string name="empty_expenses">Sin movimientos registrados.</string>
+    <string name="empty_filter">Ningún gasto coincide con los filtros.</string>
+
+    <!-- Detalle -->
+    <string name="btn_back">← Volver</string>
+    <string name="error_expense_not_found">No encontramos ese gasto.</string>
+    <string name="hint_tap_photo_zoom">Tocá la foto para ampliarla</string>
+    <string name="btn_edit">Editar</string>
+    <string name="btn_delete">Eliminar</string>
+    <string name="dialog_delete_title">Eliminar gasto</string>
+    <string name="dialog_delete_message">Se va a borrar este gasto de tu listado.</string>
+    <string name="section_note">Nota</string>
+
+    <!-- Mapa -->
+    <string name="map_empty_expenses">Todavía no hay gastos registrados.</string>
+    <string name="map_no_locations">Tus gastos no tienen ubicación.</string>
+    <string name="map_tap_marker">Tocá un marcador para ver el detalle.</string>
+
+    <!-- Resumen -->
+    <string name="summary_total_month">Total del mes</string>
+    <string name="summary_empty">Sin movimientos registrados en este mes.</string>
+    <string name="summary_daily_average">Promedio diario</string>
+    <string name="summary_previous_month">Mes anterior</string>
+    <string name="summary_by_category">Gastos por categoría</string>
+    <string name="cd_previous_month">Mes anterior</string>
+    <string name="cd_next_month">Mes siguiente</string>
+
+    <!-- Asistente -->
+    <string name="assistant_title">Asistente</string>
+    <string name="assistant_subtitle">Analizá tus hábitos, pedí consejos de ahorro o consultá dudas sobre tus consumos registrados.</string>
+    <string name="assistant_initial_greeting">¡Hola! Soy tu asistente financiero. ¿En qué te puedo ayudar hoy?</string>
+    <string name="assistant_input_label">Escribí acá...</string>
+    <string name="assistant_send">Enviar</string>
 </resources>

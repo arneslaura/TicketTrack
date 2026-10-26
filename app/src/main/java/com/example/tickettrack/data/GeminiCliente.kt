@@ -20,10 +20,10 @@ object GeminiCliente {
 
     private const val INSTRUCCION_GASTO =
         "Sos un asistente de gastos personales en Argentina. " +
-            "Respondé solo con JSON, sin markdown, con las claves " +
-            "amount (número con punto decimal, o null), " +
-            "category (una de: SUPERMERCADO, TRANSPORTE, SERVICIOS, OCIO, SALUD, OTROS), " +
-            "description (nota corta en español) y place (lugar o null)."
+                "Respondé solo con JSON, sin markdown, con las claves " +
+                "amount (número con punto decimal, o null), " +
+                "category (una de: SUPERMERCADO, TRANSPORTE, SERVICIOS, OCIO, SALUD, OTROS), " +
+                "description (nota corta en español) y place (lugar o null)."
 
     fun leerTicket(jpeg: ByteArray): SugerenciaGasto {
         val partes = JSONArray()
@@ -57,28 +57,31 @@ object GeminiCliente {
                     .put("parts", JSONArray().put(JSONObject().put("text", texto)))
             )
         }
-        val instruccion = "Respondé en español, en pocas oraciones, sobre los gastos de TicketTrack. " +
-            "Usá solo los datos del contexto. Si no alcanza, decilo.\n\n" +
-            contextoDe(gastos)
+        val instruccion = "Respondé en español, de forma amigable y concisa, sobre los gastos de TicketTrack. " +
+                "Usá solo los datos del contexto. Si no tenés la información, decilo amablemente.\n\n" +
+                contextoDe(gastos)
         return generar(instruccion = instruccion, contenidos = contenidos, json = false)
     }
 
     private fun contextoDe(gastos: List<Gasto>): String {
         val resumen = resumenDelMes(gastos)
         val fecha = SimpleDateFormat("dd/MM/yyyy", Locale("es", "AR"))
+
         val porCategoria = resumen.porCategoria.joinToString("\n") {
-            "- ${it.categoria.descripcion}: ${formatoPesos(it.total)} (${it.cantidad})"
+            "- ${it.categoria.descripcion}: ${formatoPesos(it.total)}"
         }
+
         val recientes = gastos.take(40).joinToString("\n") { gasto ->
             val lugar = gasto.placeLabel?.takeIf { it.isNotBlank() } ?: ""
             "${fecha.format(gasto.createdAt)} | ${gasto.category.descripcion} | " +
-                "${formatoPesos(gasto.amount)} | ${gasto.description} | $lugar"
+                    "${formatoPesos(gasto.amount)} | ${gasto.description} | $lugar"
         }
-        return "Mes ${resumen.titulo}: total ${formatoPesos(resumen.total)}, " +
-            "${resumen.cantidad} gastos, promedio ${formatoPesos(resumen.promedio)}.\n" +
-            porCategoria +
-            "\nGastos recientes:\n" +
-            recientes.ifBlank { "No hay gastos cargados." }
+
+        return "Mes ${resumen.titulo}: total ${formatoPesos(resumen.total)}.\n" +
+                "Gastos por categoría:\n" +
+                porCategoria.ifBlank { "Sin gastos en el mes." } +
+                "\n\nGastos recientes:\n" +
+                recientes.ifBlank { "No hay gastos cargados." }
     }
 
     private fun generar(
@@ -118,8 +121,8 @@ object GeminiCliente {
             requestMethod = "POST"
             doOutput = true
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            connectTimeout = 20000
-            readTimeout = 45000
+            connectTimeout = 60000
+            readTimeout = 90000
         }
         conexion.outputStream.use { it.write(cuerpo.toString().toByteArray(Charsets.UTF_8)) }
         val codigo = conexion.responseCode
@@ -162,7 +165,7 @@ object GeminiCliente {
         val nombre = json.optString("category")
         val categoria = CategoriaGasto.entries.find {
             it.name.equals(nombre, ignoreCase = true) ||
-                it.descripcion.equals(nombre, ignoreCase = true)
+                    it.descripcion.equals(nombre, ignoreCase = true)
         }
         val amount = when {
             !json.has("amount") || json.isNull("amount") -> null
@@ -181,10 +184,13 @@ object GeminiCliente {
         val detalle = runCatching {
             JSONObject(cuerpo).getJSONObject("error").optString("message")
         }.getOrNull().orEmpty()
+
         return when (codigo) {
-            400, 403 -> "La clave de Gemini no es válida. Revisá GEMINI_API_KEY en local.properties."
-            429 -> "Gemini está ocupado. Probá de nuevo en un rato."
-            else -> detalle.ifBlank { "No se pudo consultar a Gemini." }
+            400, 403 -> "La clave de acceso no es válida. Revisá la configuración."
+            429 -> "El asistente está recibiendo muchas consultas. Probá de nuevo en un rato."
+            503 -> "El servidor tiene alta demanda en este momento. Por favor, intentá de nuevo en unos minutos." // Captura explícita del error en inglés
+            500 -> "Ocurrió un error en el servidor. Intentá más tarde."
+            else -> "Ocurrió un error inesperado. Por favor, intentá de nuevo."
         }
     }
 }

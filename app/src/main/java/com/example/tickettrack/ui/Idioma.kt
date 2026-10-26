@@ -33,6 +33,7 @@ object Idiomas {
     }
 }
 
+// ESTO SE SIGUE USANDO: Traduce las categorías del modelo fuera de los Composables
 fun CategoriaGasto.en(idioma: Idioma): String = when (idioma) {
     Idioma.ESPANOL -> descripcion
     Idioma.INGLES -> when (this) {
@@ -65,10 +66,4 @@ fun PeriodoFiltro.en(idioma: Idioma): String = when (idioma) {
         PeriodoFiltro.SEMANA -> "Esta semana"
         PeriodoFiltro.MES -> "Este mês"
     }
-}
-
-fun texto(idioma: Idioma, es: String, en: String, pt: String): String = when (idioma) {
-    Idioma.ESPANOL -> es
-    Idioma.INGLES -> en
-    Idioma.PORTUGUES -> pt
 }

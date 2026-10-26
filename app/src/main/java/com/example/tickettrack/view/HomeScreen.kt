@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material3.DropdownMenuItem
@@ -37,20 +38,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.tickettrack.R
 import com.example.tickettrack.data.textoUbicacion
 import com.example.tickettrack.model.CategoriaGasto
 import com.example.tickettrack.model.Gasto
 import com.example.tickettrack.model.PeriodoFiltro
 import com.example.tickettrack.model.filtrarGastos
 import com.example.tickettrack.model.formatoPesos
-import com.example.tickettrack.ui.LocalIdioma
-import com.example.tickettrack.ui.en
-import com.example.tickettrack.ui.texto
 import com.example.tickettrack.viewmodel.TicketTrackViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -63,9 +63,8 @@ fun HomeScreen(
 ) {
     val gastos by viewModel.gastos.collectAsStateWithLifecycle()
     val enLinea by viewModel.enLinea.collectAsStateWithLifecycle()
-    val idioma = LocalIdioma.current
     var categoriaNombre by rememberSaveable { mutableStateOf<String?>(null) }
-    var periodoNombre by rememberSaveable { mutableStateOf(PeriodoFiltro.TODOS.name) }
+    var periodoNombre by rememberSaveable { mutableStateOf(PeriodoFiltro.MES.name) }
     val periodo = PeriodoFiltro.valueOf(periodoNombre)
     var menuCategoria by rememberSaveable { mutableStateOf(false) }
     val categoria = categoriaNombre?.let { nombre ->
@@ -82,7 +81,7 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(18.dp))
 
         Text(
-            text = texto(idioma, "Mis gastos", "My expenses", "Minhas despesas"),
+            text = stringResource(R.string.title_my_expenses),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -96,7 +95,7 @@ fun HomeScreen(
         ) {
             Column(modifier = Modifier.padding(horizontal = 22.dp, vertical = 20.dp)) {
                 Text(
-                    text = periodo.en(idioma),
+                    text = periodo.traducido(),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f)
                 )
@@ -106,39 +105,34 @@ fun HomeScreen(
                     style = MaterialTheme.typography.displaySmall,
                     color = MaterialTheme.colorScheme.onPrimary
                 )
-                Text(
-                    text = when (visibles.size) {
-                        0 -> texto(idioma, "Sin gastos en este filtro", "No expenses in this filter", "Sem gastos neste filtro")
-                        1 -> texto(idioma, "1 gasto", "1 expense", "1 gasto")
-                        else -> texto(
-                            idioma,
-                            "${visibles.size} gastos",
-                            "${visibles.size} expenses",
-                            "${visibles.size} gastos"
-                        )
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f)
-                )
             }
         }
 
         if (!enLinea) {
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Surface(
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                shape = RoundedCornerShape(16.dp)
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text(
-                    text = texto(
-                        idioma,
-                        "Sin conexión. Estás viendo los gastos guardados en el teléfono.",
-                        "You are offline. Showing the expenses saved on this phone.",
-                        "Sem conexão. Mostrando os gastos salvos no telefone."
-                    ),
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Filled.CloudOff,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.offline_warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
@@ -165,7 +159,7 @@ fun HomeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = opcion.en(idioma),
+                            text = opcion.traducido(),
                             color = if (elegido) MaterialTheme.colorScheme.onPrimary
                             else MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.labelLarge
@@ -210,12 +204,12 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = texto(idioma, "Categoría", "Category", "Categoria"),
+                            text = stringResource(R.string.label_category),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = elegida?.en(idioma) ?: texto(idioma, "Todas", "All", "Todas"),
+                            text = elegida?.traducida() ?: stringResource(R.string.category_all),
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
@@ -231,7 +225,7 @@ fun HomeScreen(
                 onDismissRequest = { menuCategoria = false }
             ) {
                 DropdownMenuItem(
-                    text = { Text(texto(idioma, "Todas", "All", "Todas")) },
+                    text = { Text(stringResource(R.string.category_all)) },
                     leadingIcon = {
                         Icon(Icons.Filled.GridView, contentDescription = null)
                     },
@@ -242,7 +236,7 @@ fun HomeScreen(
                 )
                 CategoriaGasto.entries.forEach { opcion ->
                     DropdownMenuItem(
-                        text = { Text(opcion.en(idioma)) },
+                        text = { Text(opcion.traducida()) },
                         leadingIcon = {
                             Icon(
                                 imageVector = iconoCategoria(opcion),
@@ -261,7 +255,6 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-    
         if (visibles.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -269,19 +262,9 @@ fun HomeScreen(
             ) {
                 Text(
                     text = if (gastos.isEmpty()) {
-                        texto(
-                            idioma,
-                            "Todavía no hay gastos.\nTocá + para cargar el primero.",
-                            "No expenses yet.\nTap + to add the first one.",
-                            "Ainda não há gastos.\nToque em + para adicionar o primeiro."
-                        )
+                        stringResource(R.string.empty_expenses)
                     } else {
-                        texto(
-                            idioma,
-                            "Ningún gasto coincide con esos filtros.",
-                            "No expenses match those filters.",
-                            "Nenhum gasto corresponde a esses filtros."
-                        )
+                        stringResource(R.string.empty_filter)
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -306,11 +289,10 @@ fun HomeScreen(
 
 @Composable
 fun ItemGasto(gasto: Gasto, onClick: () -> Unit) {
-    val idioma = LocalIdioma.current
     val formatoFecha = SimpleDateFormat("d MMM", Locale.getDefault())
-    val titulo = gasto.description.ifBlank { gasto.category.en(idioma) }
+    val titulo = gasto.description.ifBlank { gasto.category.traducida() }
     val detalle = buildString {
-        append(gasto.category.en(idioma))
+        append(gasto.category.traducida())
         append(" · ")
         append(formatoFecha.format(gasto.createdAt))
         textoUbicacion(gasto.placeLabel, gasto.latitude, gasto.longitude)?.let {

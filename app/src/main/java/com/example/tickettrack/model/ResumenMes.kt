@@ -10,15 +10,13 @@ import kotlin.math.roundToInt
 data class LineaResumen(
     val categoria: CategoriaGasto,
     val total: Double,
-    val cantidad: Int,
     val proporcion: Float
 )
 
 data class ResumenMes(
     val titulo: String,
     val total: Double,
-    val cantidad: Int,
-    val promedio: Double,
+    val promedioDiario: Double,
     val mayor: Gasto?,
     val totalMesAnterior: Double,
     val diferenciaMesAnterior: Double,
@@ -30,6 +28,10 @@ fun resumenDelMes(gastos: List<Gasto>, ahora: Calendar = Calendar.getInstance())
     val total = delMes.sumOf { it.amount }
     val mesAnterior = (ahora.clone() as Calendar).apply { add(Calendar.MONTH, -1) }
     val totalMesAnterior = gastos.filter { mismoMes(it.createdAt, mesAnterior) }.sumOf { it.amount }
+
+    val diasEnMes = ahora.getActualMaximum(Calendar.DAY_OF_MONTH)
+    val promedioDiario = if (diasEnMes > 0) total / diasEnMes else 0.0
+
     val lineas = delMes
         .groupBy { it.category }
         .map { (categoria, items) ->
@@ -37,7 +39,6 @@ fun resumenDelMes(gastos: List<Gasto>, ahora: Calendar = Calendar.getInstance())
             LineaResumen(
                 categoria = categoria,
                 total = suma,
-                cantidad = items.size,
                 proporcion = if (total > 0.0) (suma / total).toFloat() else 0f
             )
         }
@@ -49,8 +50,7 @@ fun resumenDelMes(gastos: List<Gasto>, ahora: Calendar = Calendar.getInstance())
     return ResumenMes(
         titulo = titulo,
         total = total,
-        cantidad = delMes.size,
-        promedio = if (delMes.isEmpty()) 0.0 else total / delMes.size,
+        promedioDiario = promedioDiario,
         mayor = delMes.maxByOrNull { it.amount },
         totalMesAnterior = totalMesAnterior,
         diferenciaMesAnterior = total - totalMesAnterior,
@@ -61,9 +61,9 @@ fun resumenDelMes(gastos: List<Gasto>, ahora: Calendar = Calendar.getInstance())
 fun textoComparacion(diferencia: Double): String {
     val absoluto = abs(diferencia)
     return when {
-        diferencia > 0.5 -> "${formatoPesos(absoluto)} más que el mes anterior"
-        diferencia < -0.5 -> "${formatoPesos(absoluto)} menos que el mes anterior"
-        else -> "Igual que el mes anterior"
+        diferencia > 0.5 -> "+${formatoPesos(absoluto)}"
+        diferencia < -0.5 -> "-${formatoPesos(absoluto)}"
+        else -> "="
     }
 }
 
@@ -81,5 +81,5 @@ fun formatoPesos(monto: Double): String {
 private fun mismoMes(fecha: Date, referencia: Calendar): Boolean {
     val calendario = Calendar.getInstance().apply { time = fecha }
     return calendario.get(Calendar.YEAR) == referencia.get(Calendar.YEAR) &&
-        calendario.get(Calendar.MONTH) == referencia.get(Calendar.MONTH)
+            calendario.get(Calendar.MONTH) == referencia.get(Calendar.MONTH)
 }

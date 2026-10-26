@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.Color
 val VerdePrincipal = Color(0xFF0C6B58)
 val VerdeOscuro = Color(0xFF084838)
 val VerdeClaro = Color(0xFFD8F3EA)
-val VerdeBrillo = Color(0xFF3EE0A4)
+val VerdeBrillo = Color(0xFF2EBD8A)
 
 val FondoClaro = Color(0xFFF3F6F4)
 val TextoOscuro = Color(0xFF14211C)

@@ -19,10 +19,16 @@ class LogicaGastoTest {
     }
 
     @Test
-    fun textoComparacion_diceSiSubioBajoOQuedoIgual() {
-        assertEquals("$100 más que el mes anterior", textoComparacion(100.0))
-        assertEquals("$80,50 menos que el mes anterior", textoComparacion(-80.5))
-        assertEquals("Igual que el mes anterior", textoComparacion(0.2))
+    fun filtrarGastos_porPeriodoSemana() {
+        val ahora = fecha(2026, Calendar.OCTOBER, 21, 15) // Un miércoles
+        val gastoEnSemana = gasto(150.0, CategoriaGasto.TRANSPORTE, fecha(2026, Calendar.OCTOBER, 19, 10)) // Lunes de esa semana
+        val gastoFueraSemana = gasto(40.0, CategoriaGasto.SUPERMERCADO, fecha(2026, Calendar.OCTOBER, 10, 23)) // Semana anterior
+        val lista = listOf(gastoEnSemana, gastoFueraSemana)
+
+        val resultado = filtrarGastos(lista, null, PeriodoFiltro.SEMANA, ahora)
+
+        assertEquals(1, resultado.size)
+        assertEquals(gastoEnSemana, resultado.first())
     }
 
     @Test
@@ -55,8 +61,14 @@ class LogicaGastoTest {
 
         assertEquals("Octubre 2026", resumen.titulo)
         assertEquals(400.0, resumen.total, 0.001)
-        assertEquals(2, resumen.cantidad)
-        assertEquals(200.0, resumen.promedio, 0.001)
+
+        // CORREGIDO: Validamos que existan 2 categorías distintas en el resumen de este mes (Supermercado y Transporte)
+        assertEquals(2, resumen.porCategoria.size)
+
+        val diasEnOctubre = ahora.getActualMaximum(Calendar.DAY_OF_MONTH) // 31 días
+        val promedioEsperado = 400.0 / diasEnOctubre
+        assertEquals(promedioEsperado, resumen.promedioDiario, 0.001)
+
         assertEquals(grande, resumen.mayor)
         assertEquals(50.0, resumen.totalMesAnterior, 0.001)
         assertEquals(350.0, resumen.diferenciaMesAnterior, 0.001)
@@ -66,10 +78,13 @@ class LogicaGastoTest {
 
     @Test
     fun resumenDelMes_vacioNoFalla() {
-        val resumen = resumenDelMes(emptyList(), fecha(2026, Calendar.OCTOBER, 1, 8))
+        val ahora = fecha(2026, Calendar.OCTOBER, 1, 8)
+        val resumen = resumenDelMes(emptyList(), ahora)
+
         assertEquals(0.0, resumen.total, 0.001)
-        assertEquals(0, resumen.cantidad)
-        assertEquals(0.0, resumen.promedio, 0.001)
+        assertEquals(0.0, resumen.promedioDiario, 0.001)
+        assertEquals(0.0, resumen.totalMesAnterior, 0.001)
+        assertEquals(0.0, resumen.diferenciaMesAnterior, 0.001)
         assertNull(resumen.mayor)
         assertTrue(resumen.porCategoria.isEmpty())
     }

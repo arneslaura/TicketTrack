@@ -26,14 +26,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.tickettrack.R
 import com.example.tickettrack.viewmodel.TicketTrackViewModel
 
 private data class MensajeChat(val delUsuario: Boolean, val texto: String)
 
 @Composable
 fun AsistenteScreen(viewModel: TicketTrackViewModel) {
-    val mensajes = remember { mutableStateListOf<MensajeChat>() }
+    val saludoInicial = stringResource(R.string.assistant_initial_greeting)
+    val mensajes = remember {
+        mutableStateListOf(MensajeChat(delUsuario = false, texto = saludoInicial))
+    }
     var pregunta by remember { mutableStateOf("") }
     var pensando by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -47,32 +52,25 @@ fun AsistenteScreen(viewModel: TicketTrackViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
+            .padding(top = 16.dp) // <--- Margen superior agregado para que no quede apretado
     ) {
-        Spacer(modifier = Modifier.height(18.dp))
         Text(
-            text = "Asistente",
+            text = stringResource(R.string.assistant_title),
             style = MaterialTheme.typography.headlineMedium
         )
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Preguntá por tus gastos. Por ejemplo: ¿cuánto gasté en transporte este mes?",
+            text = stringResource(R.string.assistant_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp)) // <--- Espacio ampliado antes del chat
 
         LazyColumn(
             state = lista,
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            if (mensajes.isEmpty()) {
-                item {
-                    Text(
-                        text = "Todavía no hay preguntas.",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            }
             items(mensajes) { mensaje ->
                 val alineadoAlUsuario = mensaje.delUsuario
                 Row(
@@ -113,9 +111,11 @@ fun AsistenteScreen(viewModel: TicketTrackViewModel) {
         }
 
         if (error != null) {
-            Text(text = error!!, color = MaterialTheme.colorScheme.error)
             Spacer(modifier = Modifier.height(8.dp))
+            Text(text = error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Row(
             modifier = Modifier
@@ -127,7 +127,7 @@ fun AsistenteScreen(viewModel: TicketTrackViewModel) {
                 value = pregunta,
                 onValueChange = { pregunta = it },
                 modifier = Modifier.weight(1f),
-                label = { Text("Tu pregunta") },
+                label = { Text(stringResource(R.string.assistant_input_label)) },
                 enabled = !pensando,
                 maxLines = 3
             )
@@ -139,7 +139,8 @@ fun AsistenteScreen(viewModel: TicketTrackViewModel) {
                     error = null
                     mensajes.add(MensajeChat(delUsuario = true, texto = texto))
                     pensando = true
-                    val historial = mensajes.map { mensaje ->
+
+                    val historial = mensajes.drop(1).map { mensaje ->
                         (if (mensaje.delUsuario) "user" else "model") to mensaje.texto
                     }
                     viewModel.preguntar(
@@ -161,7 +162,7 @@ fun AsistenteScreen(viewModel: TicketTrackViewModel) {
                 enabled = pregunta.isNotBlank() && !pensando,
                 modifier = Modifier.padding(top = 8.dp)
             ) {
-                Text(if (pensando) "..." else "Enviar")
+                Text(if (pensando) "..." else stringResource(R.string.assistant_send))
             }
         }
     }

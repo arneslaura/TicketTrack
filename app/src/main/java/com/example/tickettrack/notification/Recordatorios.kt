@@ -18,7 +18,6 @@ import com.example.tickettrack.R
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
-// Agregamos el "activo" a la clase
 data class HoraRecordatorio(val hora: Int, val minuto: Int, val activo: Boolean = false) {
     fun texto(): String = "%02d:%02d".format(hora, minuto)
 }

@@ -1,0 +1,127 @@
+<resources>
+    <!-- Login -->
+    <string name="app_name">TicketTrack</string>
+    <string name="slogan">Your expenses in one place</string>
+    <string name="login_title">Log in</string>
+    <string name="email_label">Email</string>
+    <string name="password_label">Password</string>
+    <string name="password_min">Minimum 6 characters</string>
+    <string name="repeat_password_label">Repeat password</string>
+    <string name="create_account_title">Create account</string>
+    <string name="btn_login">Log in</string>
+    <string name="btn_create_account">Create account</string>
+    <string name="btn_continue_google">Continue with Google</string>
+    <string name="link_create_account">Create new account</string>
+    <string name="link_have_account">I have an account, log in</string>
+
+    <string name="error_google_no_token">Google returned no token. Check the web client ID.</string>
+    <string name="error_google_fail">Could not log in with Google. Try again.</string>
+    <string name="error_google_setup">Google is not activated in Firebase. Check GOOGLE_WEB_CLIENT_ID.</string>
+    <string name="error_empty_login">Fill in email and password.</string>
+    <string name="error_empty_register">Fill in the email and both passwords.</string>
+    <string name="error_invalid_email">Invalid email.</string>
+    <string name="error_short_password">Password must be at least 6 characters.</string>
+    <string name="error_password_mismatch">Passwords do not match.</string>
+
+    <!-- Profile -->
+    <string name="profile_settings">Settings</string>
+    <string name="profile_appearance">Appearance</string>
+    <string name="theme_system">System</string>
+    <string name="theme_day">Day</string>
+    <string name="theme_night">Night</string>
+    <string name="profile_language">Language</string>
+    <string name="reminder_title">Daily reminder</string>
+    <string name="reminder_desc">Remind me to add expenses</string>
+    <string name="reminder_time">Reminder time</string>
+    <string name="btn_signout">Sign out</string>
+
+    <!-- Reminder Dialog -->
+    <string name="dialog_reminder_title">Reminder time</string>
+    <string name="btn_test_sound">Test sound</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="error_notifications_off">Enable notifications to use the reminder.</string>
+    <string name="generic_profile">Generic profile</string>
+
+    <string name="nav_expenses">Expenses</string>
+    <string name="nav_map">Map</string>
+    <string name="nav_summary">Summary</string>
+    <string name="nav_ai">Assistant</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- AddGastoScreen -->
+    <string name="title_new_expense">New expense</string>
+    <string name="title_edit_expense">Edit expense</string>
+    <string name="loading_expense">Loading expense...</string>
+    <string name="section_ai_assistant">Quick assistant</string>
+    <string name="ai_assistant_desc">Save time by dictating what you bought.</string>
+    <string name="ai_placeholder">Describe your expense here...</string>
+    <string name="btn_dictate">Dictate</string>
+    <string name="btn_build">Build</string>
+    <string name="btn_thinking">Thinking...</string>
+    <string name="section_expense_data">Expense details</string>
+    <string name="label_amount">Amount</string>
+    <string name="label_category">Category</string>
+    <string name="label_note">Note (optional)</string>
+    <string name="label_date">Date</string>
+    <string name="section_receipt">Receipt</string>
+    <string name="btn_camera">Camera</string>
+    <string name="btn_gallery">Gallery</string>
+    <string name="btn_complete_photo">Complete with photo</string>
+    <string name="loading_reading_ticket">Reading ticket...</string>
+    <string name="section_place">Location</string>
+    <string name="btn_use_location">Use my location</string>
+    <string name="map_hint">Drag the map to adjust the exact point.</string>
+    <string name="btn_save_expense">Save expense</string>
+    <string name="btn_save_changes">Save changes</string>
+    <string name="btn_saving">Saving...</string>
+
+    <!-- Expense Categories -->
+    <string name="cat_supermarket">Supermarket</string>
+    <string name="cat_transport">Transport</string>
+    <string name="cat_services">Services</string>
+    <string name="cat_leisure">Leisure</string>
+    <string name="cat_health">Health</string>
+    <string name="cat_others">Others</string>
+
+    <!-- Home -->
+    <string name="title_my_expenses">My expenses</string>
+    <string name="offline_warning">You are offline</string>
+    <string name="filter_all">All</string>
+    <string name="filter_week">This week</string>
+    <string name="filter_month">This month</string>
+    <string name="category_all">All</string>
+    <string name="empty_expenses">No expenses recorded.</string>
+    <string name="empty_filter">No expenses match the selected filters.</string>
+
+    <!-- Detail -->
+    <string name="btn_back">← Back</string>
+    <string name="error_expense_not_found">Expense not found.</string>
+    <string name="hint_tap_photo_zoom">Tap photo to zoom</string>
+    <string name="btn_edit">Edit</string>
+    <string name="btn_delete">Delete</string>
+    <string name="dialog_delete_title">Delete expense</string>
+    <string name="dialog_delete_message">This expense will be deleted from your list.</string>
+    <string name="section_note">Note</string>
+
+    <!-- Map -->
+    <string name="map_empty_expenses">No expenses recorded yet.</string>
+    <string name="map_no_locations">Your expenses have no location.</string>
+    <string name="map_tap_marker">Tap a marker to view details.</string>
+
+    <!-- Summary -->
+    <string name="summary_total_month">Monthly total</string>
+    <string name="summary_empty">No expenses recorded this month.</string>
+    <string name="summary_daily_average">Daily average</string>
+    <string name="summary_previous_month">Previous month</string>
+    <string name="summary_by_category">Expenses by category</string>
+    <string name="cd_previous_month">Previous month</string>
+    <string name="cd_next_month">Next month</string>
+
+    <!-- Assistant -->
+    <string name="assistant_title">Assistant</string>
+    <string name="assistant_subtitle">Analyze your habits, ask for saving tips, or check questions about your recorded expenses.</string>
+    <string name="assistant_initial_greeting">Hello! I am your financial assistant. How can I help you today?</string>
+    <string name="assistant_input_label">Type here...</string>
+    <string name="assistant_send">Send</string>
+</resources>

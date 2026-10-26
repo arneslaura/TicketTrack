@@ -1,7 +1,8 @@
 package com.example.tickettrack.view
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,7 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -20,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,15 +34,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.tickettrack.R
 import com.example.tickettrack.model.formatoPesos
 import com.example.tickettrack.model.resumenDelMes
-import com.example.tickettrack.model.textoComparacion
 import com.example.tickettrack.viewmodel.TicketTrackViewModel
-import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
@@ -48,7 +55,6 @@ fun ResumenScreen(
     var mesesAtras by rememberSaveable { mutableIntStateOf(0) }
     val calendario = Calendar.getInstance().apply { add(Calendar.MONTH, -mesesAtras) }
     val resumen = resumenDelMes(gastos, calendario)
-    val formatoFecha = SimpleDateFormat("dd/MM/yyyy", Locale("es", "AR"))
 
     Column(
         modifier = Modifier
@@ -66,12 +72,13 @@ fun ResumenScreen(
             IconButton(onClick = { mesesAtras += 1 }) {
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "Mes anterior"
+                    contentDescription = stringResource(R.string.cd_previous_month)
                 )
             }
             Text(
                 text = resumen.titulo,
-                style = MaterialTheme.typography.headlineSmall
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground
             )
             IconButton(
                 onClick = { if (mesesAtras > 0) mesesAtras -= 1 },
@@ -79,151 +86,172 @@ fun ResumenScreen(
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "Mes siguiente"
+                    contentDescription = stringResource(R.string.cd_next_month),
+                    tint = if (mesesAtras > 0) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        androidx.compose.material3.Surface(
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.primary
         ) {
             Column(modifier = Modifier.padding(horizontal = 22.dp, vertical = 20.dp)) {
                 Text(
+                    text = stringResource(R.string.summary_total_month),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
                     text = formatoPesos(resumen.total),
                     style = MaterialTheme.typography.displaySmall,
                     color = MaterialTheme.colorScheme.onPrimary
-                )
-                Text(
-                    text = if (resumen.cantidad == 1) "1 gasto" else "${resumen.cantidad} gastos",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.82f)
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            TarjetaDato(
-                titulo = "Promedio",
-                valor = formatoPesos(resumen.promedio),
-                modifier = Modifier.weight(1f)
-            )
-            TarjetaDato(
-                titulo = "Mes anterior",
-                valor = formatoPesos(resumen.totalMesAnterior),
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = textoComparacion(resumen.diferenciaMesAnterior),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        resumen.mayor?.let { mayor ->
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "Gasto más alto", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            Card(
+        if (resumen.total == 0.0) {
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onAbrirGasto(mayor.id) },
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+                    .padding(top = 48.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = mayor.category.descripcion,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = formatoPesos(mayor.amount),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    Text(
-                        text = formatoFecha.format(mayor.createdAt),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                Text(
+                    text = stringResource(R.string.summary_empty),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        if (resumen.porCategoria.isEmpty()) {
-            Text(
-                text = "Ese mes todavía no hay gastos.",
-                style = MaterialTheme.typography.bodyLarge
-            )
         } else {
-            Text(text = "Por categoría", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(12.dp))
-            resumen.porCategoria.forEach { linea ->
-                val porcentaje = (linea.proporcion * 100).roundToInt()
-                val gastosTexto = if (linea.cantidad == 1) "1 gasto" else "${linea.cantidad} gastos"
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = stringResource(R.string.summary_daily_average),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = formatoPesos(resumen.promedioDiario),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Card(
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = stringResource(R.string.summary_previous_month),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = formatoPesos(resumen.totalMesAnterior),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = stringResource(R.string.summary_by_category),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            resumen.porCategoria.forEach { linea ->
+                val porcentaje = (linea.proporcion * 100).roundToInt()
+                val colorCat = colorCategoria(linea.categoria)
+                val iconoCat = iconoCategoria(linea.categoria)
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(colorCat.copy(alpha = 0.16f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = iconoCat,
+                                    contentDescription = null,
+                                    tint = colorCat,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = linea.categoria.descripcion,
+                                text = linea.categoria.traducida(),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
                                 text = formatoPesos(linea.total),
-                                style = MaterialTheme.typography.titleMedium
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
                             )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "$gastosTexto · $porcentaje%",
-                            style = MaterialTheme.typography.bodySmall
-                        )
                         Spacer(modifier = Modifier.height(8.dp))
-                        LinearProgressIndicator(
-                            progress = { linea.proporcion },
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            LinearProgressIndicator(
+                                progress = { linea.proporcion },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(6.dp)
+                                    .clip(CircleShape),
+                                color = colorCat,
+                                trackColor = colorCat.copy(alpha = 0.12f)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "$porcentaje%",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
         }
         Spacer(modifier = Modifier.height(24.dp))
-    }
-}
-
-@Composable
-private fun TarjetaDato(
-    titulo: String,
-    valor: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = titulo, style = MaterialTheme.typography.bodySmall)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = valor, style = MaterialTheme.typography.titleLarge)
-        }
     }
 }
